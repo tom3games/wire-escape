@@ -1,0 +1,586 @@
+[hidden], .hidden { display: none !important; }
+:root {
+  --ink: #14161a; --ink2: #1d2128; --panel: rgba(20, 22, 26, 0.9); --line: rgba(255, 255, 255, 0.12);
+  --fg: #f3f1ea; --mute: #a9adb5; --hot: #ff5a1f; --yel: #f2c230; --ok: #36c37a; --warn: #f2c230; --bad: #ff3b30; --blue: #3b8cff;
+  --f-head: 'Dela Gothic One', 'M PLUS 1p', 'Hiragino Kaku Gothic ProN', sans-serif;
+  --f-num: 'Chakra Petch', 'M PLUS 1p', system-ui, sans-serif;
+  --f-body: 'M PLUS 1p', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html { background: var(--ink); height: 100%; touch-action: none; }
+body { margin: 0; height: 100%; overflow: hidden; color: var(--fg); font-family: var(--f-body); background: transparent;
+  -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+#view { position: fixed; inset: 0; }
+#view canvas { display: block; width: 100%; height: 100%; }
+button { font-family: inherit; }
+#bootfail { position: fixed; left: 12px; right: 12px; bottom: 12px; padding: 12px; background: #400; color: #fff; font: 13px/1.5 monospace; z-index: 99; white-space: pre-wrap; }
+
+/* ---------------------------------------------------------- 画面共通 */
+.screen { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 16px; z-index: 10; }
+.screen::before { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(10,11,14,0.86) 0%, rgba(10,11,14,0.55) 46%, rgba(10,11,14,0.1) 100%); pointer-events: none; }
+#title { justify-content: flex-start; padding-left: clamp(16px, 6vw, 96px); }
+.title-card, .panel { position: relative; }
+.title-card { width: min(460px, 100%); }
+.hazard { height: 10px; width: 180px; margin-bottom: 18px; background: repeating-linear-gradient(-45deg, var(--yel) 0 10px, var(--ink) 10px 20px); }
+.logo { margin: 0; font-family: var(--f-head); font-weight: 400; line-height: 0.92; letter-spacing: 0.02em; font-size: clamp(40px, min(9vw, 10.5vh), 92px); display: flex; flex-direction: column; text-shadow: 0 6px 0 rgba(0,0,0,0.35); }
+.logo span:first-child { color: var(--hot); }
+.logo-sub { font-size: 0.32em; letter-spacing: 0.5em; color: var(--mute); margin: 6px 0 2px; }
+.tagline { font-family: var(--f-head); font-size: 20px; margin: 14px 0 6px; }
+.story { color: var(--mute); font-size: 14px; line-height: 1.7; margin: 0 0 16px; max-width: 30em; }
+@media (max-height: 760px) { .story { display: none; } .tagline { margin-bottom: 14px; } .hazard { margin-bottom: 10px; } .btn { min-height: 44px; } }
+.field { display: flex; flex-direction: column; gap: 6px; font-size: 12px; color: var(--mute); letter-spacing: 0.06em; margin-bottom: 12px; }
+.field input, .field select { font: 700 18px var(--f-body); color: var(--fg); background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; outline: none; }
+.field input:focus, .field select:focus { border-color: var(--yel); }
+.field select option { color: #111; }
+.field-row { display: flex; gap: 12px; align-items: flex-end; }
+.field.small { width: 120px; }
+.carpick { flex: 1; display: flex; gap: 6px; margin-bottom: 12px; }
+.carpick button { flex: 1; padding: 10px 4px; font: 700 12px var(--f-num); letter-spacing: 0.08em; color: var(--mute); background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 6px; cursor: pointer; }
+.carpick button.on { color: var(--ink); background: var(--yel); border-color: var(--yel); }
+.btns { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
+.btns.col { flex-direction: column; }
+.btn { min-height: 48px; padding: 0 22px; border-radius: 6px; border: 1px solid var(--line); background: rgba(255,255,255,0.08); color: var(--fg); font-weight: 800; font-size: 15px; cursor: pointer; transition: transform .12s, background .12s; }
+.btn:hover:not(:disabled) { background: rgba(255,255,255,0.16); transform: translateY(-1px); }
+.btn:disabled { opacity: 0.42; cursor: not-allowed; }
+.btn.primary { background: var(--hot); border-color: var(--hot); color: #fff; box-shadow: 0 4px 0 #a8350d; }
+.btn.primary:hover { background: #ff6d37; }
+.btn.ghost { background: transparent; }
+.btn.small { min-height: 36px; padding: 0 14px; font-size: 13px; }
+.btns .btn { flex: 1 1 auto; }
+.foot { display: flex; gap: 18px; margin-top: 22px; }
+.link { background: none; border: 0; color: var(--mute); font-size: 13px; cursor: pointer; padding: 6px 0; text-decoration: underline; text-underline-offset: 3px; }
+
+.panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 20px 22px; max-height: calc(100vh - 32px); overflow: auto; box-shadow: 0 20px 60px rgba(0,0,0,0.5); }
+.panel.wide { width: min(980px, 100%); }
+.panel.narrow { width: min(360px, 100%); }
+.panel h2 { font-family: var(--f-head); font-weight: 400; margin: 0; font-size: 26px; }
+.panel h3 { font-size: 12px; letter-spacing: 0.12em; color: var(--mute); margin: 18px 0 8px; font-weight: 700; }
+.panel-head { display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--line); padding-bottom: 12px; }
+.panel-head h2 { flex: 1; }
+.credits { font-family: var(--f-num); color: var(--mute); }
+.credits b { color: var(--yel); font-size: 22px; }
+
+/* ---------------------------------------------------------- ガレージ */
+.garage-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 24px; }
+.car-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.car-card { text-align: left; padding: 10px; border-radius: 8px; border: 1px solid var(--line); background: rgba(255,255,255,0.04); color: var(--fg); cursor: pointer; }
+.car-card b { display: block; font: 700 15px var(--f-num); letter-spacing: 0.06em; }
+.car-card span { font-size: 11px; color: var(--mute); line-height: 1.5; display: block; margin-top: 4px; }
+.car-card.on { border-color: var(--yel); background: rgba(242,194,48,0.12); }
+.paints { display: flex; gap: 8px; flex-wrap: wrap; }
+.paints button { width: 34px; height: 34px; border-radius: 50%; border: 2px solid transparent; cursor: pointer; }
+.paints button.on { border-color: #fff; box-shadow: 0 0 0 2px var(--ink), 0 0 0 4px var(--yel); }
+#carPreview { width: 100%; max-width: 320px; height: auto; margin-top: 10px; border-radius: 8px; background: radial-gradient(ellipse at 50% 70%, #3a404a, #1b1e23 70%); }
+.stats { display: grid; gap: 6px; margin-top: 14px; }
+.stat { display: grid; grid-template-columns: 82px 1fr 46px; gap: 10px; align-items: center; font-size: 12px; color: var(--mute); }
+.stat .bar { height: 8px; background: rgba(255,255,255,0.08); border-radius: 4px; position: relative; overflow: hidden; }
+.stat .bar i { position: absolute; inset: 0 auto 0 0; background: var(--fg); border-radius: 4px; transition: width .25s; }
+.stat .bar i.up { background: var(--ok); } .stat .bar i.down { background: var(--bad); }
+.stat b { font: 700 12px var(--f-num); color: var(--fg); text-align: right; }
+.upgrades { display: grid; gap: 8px; grid-template-columns: 1fr 1fr; }
+.upg { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255,255,255,0.03); }
+.upg .nm { font-weight: 800; font-size: 14px; display: flex; gap: 8px; align-items: center; }
+.pips { display: inline-flex; gap: 3px; }
+.pips i { width: 14px; height: 6px; background: rgba(255,255,255,0.14); transform: skewX(-20deg); }
+.pips i.on { background: var(--yel); }
+.upg .tr { font-size: 11px; color: var(--mute); grid-column: 1; line-height: 1.5; }
+.upg .tr em { font-style: normal; color: var(--ok); } .upg .tr s { text-decoration: none; color: #ff8a80; }
+.upg .act { grid-row: 1 / 3; grid-column: 2; display: flex; gap: 6px; align-items: center; }
+.upg .act .btn { min-height: 36px; padding: 0 12px; font-size: 13px; }
+.upg .cost { font: 700 13px var(--f-num); color: var(--yel); min-width: 48px; text-align: right; }
+
+/* ---------------------------------------------------------- ロビー */
+.panel.lobby { width: min(560px, 100%); }
+.lead { color: var(--mute); font-size: 14px; line-height: 1.7; }
+.join-row, .invite, .lobby-row { display: flex; gap: 10px; margin-top: 14px; align-items: flex-end; }
+.join-row input { flex: 1; font: 700 26px var(--f-num); letter-spacing: 0.4em; text-transform: uppercase; text-align: center; color: var(--fg); background: rgba(255,255,255,0.06); border: 1px solid var(--line); border-radius: 6px; padding: 8px; min-width: 0; }
+.invite input { flex: 1; min-width: 0; font: 500 13px var(--f-num); color: var(--mute); background: rgba(255,255,255,0.05); border: 1px solid var(--line); border-radius: 6px; padding: 9px 10px; }
+.room-code { margin-top: 14px; display: flex; align-items: baseline; gap: 14px; color: var(--mute); font-size: 13px; }
+.room-code b { font: 700 48px var(--f-num); letter-spacing: 0.24em; color: var(--yel); }
+.plist { list-style: none; margin: 16px 0 0; padding: 0; display: grid; gap: 6px; }
+.plist li { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; padding: 9px 12px; background: rgba(255,255,255,0.05); border-radius: 6px; font-weight: 700; }
+.plist li .car { font: 700 12px var(--f-num); color: var(--mute); }
+.plist li .tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: var(--yel); color: var(--ink); }
+.plist li.off { opacity: 0.45; }
+.lobby-row .carpick { margin: 0; }
+.wait { color: var(--mute); font-size: 14px; margin-top: 14px; }
+.err { color: #ff8a80; font-size: 13px; min-height: 18px; }
+.net { font: 700 11px var(--f-num); letter-spacing: 0.1em; color: var(--mute); }
+.net.on { color: var(--ok); }
+.note { color: var(--mute); font-size: 12px; line-height: 1.6; margin: 6px 0 0; min-height: 0; }
+.lobby.guest .host-only { display: none; }
+.lobby:not(.guest) .guest-only { display: none; }
+
+/* ---------------------------------------------------------- 遊び方 */
+.howto-grid { display: grid; grid-template-columns: 1.3fr 1fr 0.6fr; gap: 22px; margin-top: 8px; align-items: start; }
+.howto-list { padding-left: 1.2em; margin: 14px 0; display: grid; gap: 10px; font-size: 14px; line-height: 1.65; align-content: start; }
+.keys { border-collapse: collapse; font-size: 13px; width: 100%; }
+.keys td { padding: 5px 6px; border-bottom: 1px solid var(--line); }
+.keys td:first-child { white-space: nowrap; width: 40%; }
+kbd { display: inline-block; min-width: 22px; padding: 2px 6px; margin-right: 3px; border-radius: 4px; border: 1px solid rgba(255,255,255,0.3); border-bottom-width: 3px; font: 700 11px var(--f-num); text-align: center; }
+.pad { font-size: 12px; color: var(--mute); line-height: 1.6; }
+.pad.credit { font-size: 10.5px; opacity: 0.8; }
+#fullMap { width: auto; max-width: 100%; height: min(62vh, 520px); background: #1b1e23; border-radius: 8px; margin-top: 14px; display: block; }
+
+/* ---------------------------------------------------------- HUD */
+#hud { position: fixed; inset: 0; z-index: 5; pointer-events: none; font-family: var(--f-num); }
+.hud-tl { position: absolute; left: 20px; top: 16px; text-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+.pos b { font-size: 64px; line-height: 1; font-weight: 700; color: #fff; }
+.pos span { font-size: 22px; color: var(--mute); margin-left: 4px; }
+.time { font-size: 24px; font-weight: 700; margin-top: 2px; letter-spacing: 0.04em; }
+.nextcp { font-size: 14px; color: var(--yel); margin-top: 4px; font-family: var(--f-body); font-weight: 800; }
+.hud-top { position: absolute; left: 50%; top: 18px; transform: translateX(-50%); width: min(520px, 46vw); }
+.track { position: relative; height: 22px; }
+.track::before { content: ''; position: absolute; left: 0; right: 0; top: 9px; height: 4px; background: rgba(255,255,255,0.22); border-radius: 2px; }
+.track .cp { position: absolute; top: 0; width: 2px; height: 22px; background: rgba(255,255,255,0.5); }
+.track .cp span { position: absolute; top: 24px; left: 50%; transform: translateX(-50%); font-size: 10px; color: var(--mute); white-space: nowrap; }
+.track .dot { position: absolute; top: 5px; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; border: 2px solid #14161a; transition: left .2s linear; }
+.track .dot.me { width: 16px; height: 16px; top: 3px; margin-left: -8px; border-color: #fff; z-index: 2; }
+.hud-tr { position: absolute; right: 16px; top: 14px; margin: 0; padding: 0; list-style: none; width: 210px; font-size: 13px; }
+.hud-tr li { display: grid; grid-template-columns: 22px 10px 1fr auto; gap: 6px; align-items: center; padding: 4px 8px; background: rgba(20,22,26,0.6); margin-bottom: 2px; border-radius: 4px; font-family: var(--f-body); font-weight: 700; }
+.hud-tr li.me { background: rgba(255,90,31,0.8); }
+.hud-tr li .sw { width: 10px; height: 10px; border-radius: 2px; }
+.hud-tr li .st { font: 700 11px var(--f-num); color: var(--mute); }
+.hud-tr li.me .st { color: #fff; }
+#miniMap { position: absolute; right: 16px; bottom: 150px; width: 180px; height: 180px; border-radius: 50%; background: rgba(20,22,26,0.55); border: 2px solid rgba(255,255,255,0.18); }
+.hud-bl { position: absolute; left: 18px; bottom: 16px; display: flex; gap: 12px; align-items: flex-end; padding: 10px 12px; background: rgba(20,22,26,0.55); border-radius: 10px; }
+#dmgSvg rect { stroke: rgba(0,0,0,0.5); stroke-width: 2; transition: fill .2s; }
+#dCab { fill: rgba(20,30,40,0.7) !important; }
+.dmg-list { display: grid; gap: 3px; font-family: var(--f-body); font-size: 12px; min-width: 150px; }
+.dmg-list div { display: grid; grid-template-columns: 1fr 40px; gap: 8px; }
+.dmg-list b { font-family: var(--f-num); text-align: right; }
+.dmg-list .heat { margin-top: 4px; height: 6px; background: rgba(255,255,255,0.12); border-radius: 3px; position: relative; overflow: hidden; display: block; }
+.dmg-list .heat i { position: absolute; inset: 0 auto 0 0; background: linear-gradient(90deg, #3b8cff, #f2c230 60%, #ff3b30); }
+.hud-br { position: absolute; right: 18px; bottom: 16px; width: 260px; text-align: right; }
+.speed b { font-size: 76px; font-weight: 700; line-height: 1; text-shadow: 0 3px 10px rgba(0,0,0,0.5); }
+.speed span { font-size: 16px; color: var(--mute); margin-left: 6px; }
+.boost { position: relative; height: 22px; margin-top: 8px; background: rgba(20,22,26,0.7); border: 1px solid rgba(255,255,255,0.25); transform: skewX(-18deg); overflow: hidden; }
+.boost-fill { position: absolute; inset: 0 auto 0 0; width: 100%; background: linear-gradient(90deg, #1d6fd1, #7fd4ff); }
+.boost.lock .boost-fill { background: repeating-linear-gradient(-45deg, #555 0 8px, #444 8px 16px); }
+.boost.on { box-shadow: 0 0 18px rgba(127,212,255,0.8); }
+.boost span { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 12px; letter-spacing: 0.2em; font-weight: 700; transform: skewX(18deg); text-shadow: 0 1px 3px rgba(0,0,0,0.6); }
+.center-msg { position: absolute; left: 0; right: 0; top: 30%; text-align: center; font-family: var(--f-head); font-size: clamp(28px, 4.6vw, 54px); color: #fff; text-shadow: 0 4px 0 rgba(0,0,0,0.4), 0 0 30px rgba(255,90,31,0.6); opacity: 0; transition: opacity .2s; }
+.center-msg.show { opacity: 1; animation: pop .35s ease-out; }
+.center-msg small { display: block; font-family: var(--f-num); font-size: 0.42em; color: var(--yel); margin-top: 4px; }
+@keyframes pop { 0% { transform: scale(1.5); } 100% { transform: scale(1); } }
+.count { position: absolute; left: 0; right: 0; top: 34%; text-align: center; font-family: var(--f-num); font-weight: 700; font-size: clamp(80px, 16vw, 180px); color: var(--yel); text-shadow: 0 8px 0 rgba(0,0,0,0.4); }
+.count.go { color: var(--ok); }
+.hint { position: absolute; left: 50%; bottom: 20px; transform: translateX(-50%); font-family: var(--f-body); font-size: 13px; color: #fff; background: rgba(20,22,26,0.7); padding: 8px 14px; border-radius: 6px; opacity: 0; transition: opacity .4s; white-space: nowrap; }
+.hint.show { opacity: 1; }
+.vignette { position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 160px rgba(255,0,0,0); transition: box-shadow .3s; }
+
+/* ---------------------------------------------------------- 結果 */
+.results { text-align: center; overflow: visible; }
+.stamp { position: absolute; right: 26px; top: -18px; transform: rotate(10deg); font-family: var(--f-head); font-size: 44px; padding: 6px 18px; border: 5px solid currentColor; border-radius: 10px; color: var(--hot); background: rgba(20,22,26,0.92); opacity: 0; }
+.stamp.show { animation: stamp .45s cubic-bezier(.2, 1.6, .4, 1) forwards; }
+@keyframes stamp { 0% { opacity: 0; transform: rotate(10deg) scale(2.6); } 100% { opacity: 1; transform: rotate(10deg) scale(1); } }
+.rtable { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 14px; }
+.rtable td { padding: 8px 10px; border-bottom: 1px solid var(--line); text-align: left; }
+.rtable td.n { font: 700 18px var(--f-num); width: 56px; }
+.rtable td.t { font-family: var(--f-num); text-align: right; }
+.rtable td.s { color: var(--mute); font-size: 12px; }
+.rtable tr.me td { background: rgba(255,90,31,0.18); }
+.rtable tr { opacity: 0; transform: translateX(-20px); }
+.rtable tr.in { opacity: 1; transform: none; transition: all .35s; }
+.earn { font-family: var(--f-num); font-size: 18px; color: var(--yel); min-height: 28px; }
+
+@media (max-width: 760px) {
+  .garage-grid, .howto-grid { grid-template-columns: 1fr; }
+  .upgrades { grid-template-columns: 1fr; }
+  .hud-tr { display: none; }
+  .hud-top { width: 60vw; left: auto; right: 12px; transform: none; }
+  .pos b { font-size: 44px; } .speed b { font-size: 52px; }
+  .hud-br { width: 190px; }
+  #miniMap { width: 120px; height: 120px; bottom: 120px; }
+  .dmg-list { display: none; }
+}
+@media (max-height: 560px) {
+  #miniMap { display: none; }
+  .story { display: none; }
+}
+@media (max-height: 600px) {
+  .field input, .field select { padding: 6px 10px; font-size: 16px; }
+  .field { margin-bottom: 8px; }
+  .btns { margin-top: 6px; }
+  .btn { min-height: 40px; }
+  .foot { margin-top: 8px; }
+  .tagline { font-size: 16px; margin: 8px 0 10px; }
+}
+
+/* ---------------------------------------------------------- スマホの操作 */
+#touch { position: fixed; inset: 0; z-index: 6; pointer-events: none; user-select: none; -webkit-user-select: none; touch-action: none; }
+#touch button { pointer-events: auto; touch-action: none; -webkit-touch-callout: none; font-family: var(--f-num); font-weight: 700; color: #fff; border: 2px solid rgba(255,255,255,0.35); background: rgba(20,22,26,0.42); backdrop-filter: blur(2px); }
+#touch button.on { background: rgba(255,90,31,0.75); border-color: #fff; }
+.t-steer { position: absolute; left: max(10px, env(safe-area-inset-left)); bottom: max(10px, env(safe-area-inset-bottom)); display: flex; gap: 12px; pointer-events: none; }
+.t-dir { width: 96px; height: 96px; border-radius: 22px; padding: 18px; }
+.t-dir svg, .t-pedals svg { width: 100%; height: 100%; display: block; pointer-events: none; }
+.t-pedals button { padding: 10px; }
+.t-pedals .t-gas { padding: 14px; }
+.t-top { position: absolute; top: max(8px, env(safe-area-inset-top)); right: max(8px, env(safe-area-inset-right)); display: flex; gap: 8px; }
+.t-top button { width: 44px; height: 44px; border-radius: 10px; padding: 9px; }
+.t-top svg { width: 100%; height: 100%; display: block; }
+.t-pedals { position: absolute; right: max(10px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: 88px 104px; grid-template-rows: 58px 116px; gap: 10px; }
+.t-pedals .t-small { border-radius: 12px; font-size: 13px; letter-spacing: 0.06em; }
+.t-pedals .t-boost { border-color: rgba(127,212,255,0.7); }
+.t-pedals .t-brake { border-radius: 16px; font-size: 14px; }
+.t-pedals .t-gas { border-radius: 18px; font-size: 16px; background: rgba(54,195,122,0.35); border-color: rgba(54,195,122,0.9); }
+.t-pedals .t-gas.on { background: rgba(54,195,122,0.8); }
+/* 縦持ち: 下の帯に並べる */
+@media (orientation: portrait) {
+  .t-dir { width: 80px; height: 80px; padding: 16px; }
+  .t-steer { gap: 8px; }
+  .t-pedals { grid-template-columns: 70px 84px; grid-template-rows: 54px 92px; }
+}
+/* タッチ端末では HUD を詰める */
+body.touch .hud-bl { display: none; }
+body.touch #hHint { top: 64px; bottom: auto; }
+body.touch .hud-br { right: auto; left: 50%; transform: translateX(-50%); bottom: max(8px, env(safe-area-inset-bottom)); width: 170px; text-align: center; }
+body.touch .speed b { font-size: 40px; }
+body.touch .speed span { font-size: 12px; }
+body.touch .boost { height: 14px; margin-top: 4px; }
+body.touch .boost span { font-size: 9px; }
+body.touch #miniMap { top: 60px; right: max(8px, env(safe-area-inset-right)); bottom: auto; width: 104px; height: 104px; }
+body.touch .hud-tr { display: none; }
+body.touch .hud-tl { top: max(8px, env(safe-area-inset-top)); left: max(10px, env(safe-area-inset-left)); }
+body.touch .pos b { font-size: 34px; } body.touch .pos span { font-size: 14px; }
+body.touch .time { font-size: 15px; } body.touch .nextcp { font-size: 12px; }
+body.touch .hud-top { top: max(10px, env(safe-area-inset-top)); width: 34vw; left: 50%; transform: translateX(-50%); right: auto; }
+body.touch .center-msg { top: 22%; font-size: clamp(22px, 6vw, 40px); }
+body.touch .count { top: 24%; font-size: clamp(60px, 14vw, 120px); }
+body.touch .dmg-mini { display: block; }
+.dmg-mini { display: none; position: absolute; left: 50%; bottom: max(70px, calc(env(safe-area-inset-bottom) + 62px)); transform: translateX(-50%); width: 120px; height: 6px; background: rgba(255,255,255,0.15); border-radius: 3px; overflow: hidden; }
+.dmg-mini i { position: absolute; inset: 0 auto 0 0; background: #36c37a; }
+@media (orientation: portrait) {
+  body.touch .hud-br { left: max(10px, env(safe-area-inset-left)); transform: none; top: 112px; bottom: auto; width: 120px; text-align: left; }
+  body.touch .dmg-mini { left: max(10px, env(safe-area-inset-left)); transform: none; top: 176px; bottom: auto; width: 120px; }
+  body.touch .hud-top { display: none; }
+}
+/* スマホの横持ち（高さが低い）: タイトルを一画面に収める */
+@media (max-height: 440px) {
+  #title { padding-top: 8px; padding-bottom: 8px; }
+  .hazard, .tagline { display: none; }
+  .logo { font-size: 34px; flex-direction: row; gap: 10px; align-items: baseline; }
+  .logo-sub { font-size: 0.4em; margin: 0; letter-spacing: 0.2em; }
+  .field { margin-bottom: 6px; gap: 3px; }
+  .field input, .field select { padding: 5px 9px; font-size: 15px; }
+  .btn { min-height: 38px; font-size: 14px; }
+  .btns { margin-top: 5px; gap: 8px; }
+  .foot { margin-top: 4px; }
+  .note { margin: 2px 0 0; font-size: 11px; }
+}
+/* 画面の高さはブラウザのバーで変わるので dvh で測る */
+.panel { max-height: calc(100dvh - 24px); }
+.title-card { max-height: calc(100dvh - 16px); overflow-y: auto; scrollbar-width: none; }
+.title-card::-webkit-scrollbar { display: none; }
+/* さらに低い横画面（iPhone の横持ちでバーが出ている状態 320〜380px） */
+@media (max-height: 380px) {
+  #title { padding-top: 6px; padding-bottom: 6px; align-items: flex-start; }
+  .logo { font-size: 26px; }
+  .story, .note:empty { display: none; }
+  .field > span { display: none; }
+  .field-row { gap: 8px; }
+  .field input, .field select { padding: 4px 8px; font-size: 14px; }
+  .carpick button { padding: 6px 4px; font-size: 11px; }
+  .btn { min-height: 34px; font-size: 13px; padding: 0 12px; }
+  .btns { margin-top: 4px; }
+  .foot { margin-top: 2px; gap: 12px; }
+  .link { padding: 2px 0; font-size: 12px; }
+  .screen { padding: 8px; }
+  .panel { padding: 12px 14px; }
+}
+/* タッチ: 小地図は横持ちなら左上（時間の下）、縦持ちなら右上 */
+body.touch #miniMap { display: block; }
+@media (orientation: landscape) {
+  body.touch #miniMap { top: 88px; left: max(10px, env(safe-area-inset-left)); right: auto; width: 92px; height: 92px; }
+}
+@media (orientation: landscape) and (max-height: 340px) {
+  body.touch #miniMap { width: 72px; height: 72px; }
+  .t-pedals { grid-template-columns: 76px 90px; grid-template-rows: 50px 96px; gap: 8px; }
+  .t-dir { width: 84px; height: 84px; padding: 16px; }
+}
+@media (orientation: landscape) { body.touch #miniMap { top: 104px; } }
+
+/* パーフェクトニトロの押し直しの窓（ニトロを入れた直後だけ出る） */
+.boost-win { position: absolute; top: 0; bottom: 0; width: 14%; right: 6%; background: rgba(255,60,40,0.0); border-left: 2px solid transparent; border-right: 2px solid transparent; transition: background .05s; }
+.boost-win.show { border-color: #ff3b30; background: rgba(255,60,40,0.25); }
+.boost-win.hot { background: rgba(255,215,0,0.9); border-color: #fff; }
+.boost.perfect .boost-fill { background: linear-gradient(90deg, #ffb020, #fff2a0); }
+.boost.perfect { box-shadow: 0 0 22px rgba(255,200,40,0.9); }
+/* 技・ノックダウンの小さな表示（右側に積む） */
+.stunt-feed { position: absolute; right: 18px; top: 38%; display: flex; flex-direction: column; align-items: flex-end; gap: 4px; pointer-events: none; }
+.stunt-feed div { font-family: var(--f-num); font-weight: 700; font-size: 20px; color: #fff; text-shadow: 0 2px 6px rgba(0,0,0,0.7); animation: feed 1.6s ease-out forwards; }
+.stunt-feed div b { color: #7fd4ff; margin-left: 6px; font-size: 15px; }
+@keyframes feed { 0% { transform: translateX(30px); opacity: 0 } 12% { transform: none; opacity: 1 } 80% { opacity: 1 } 100% { opacity: 0; transform: translateY(-10px) } }
+body.touch .stunt-feed { top: 30%; right: 50%; transform: translateX(50%); align-items: center; }
+body.touch .stunt-feed div { font-size: 16px; }
+
+.stagepick { margin: 0 0 10px; }
+.stagepick button { font-family: var(--f-body); font-size: 12.5px; letter-spacing: 0; }
+@media (max-height: 380px) { .stagepick { margin-bottom: 4px; } .stagepick button { padding: 5px 4px; font-size: 11px; } }
+
+/* ---------------------------------------------------------- 警察と犯人 */
+.roles .btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+.roles .btn svg { width: 22px; height: 22px; flex: 0 0 auto; }
+.btn.role-cop { background: #2f6fe0; border-color: #2f6fe0; box-shadow: 0 4px 0 #1b418a; }
+.role { display: inline-flex; align-items: center; gap: 6px; padding: 3px 10px 3px 6px; border-radius: 6px; font: 800 15px var(--f-body); color: #fff; }
+.role svg { width: 22px; height: 22px; }
+.role.cop { background: rgba(47,111,224,0.9); }
+.role.robber { background: rgba(214,38,74,0.9); }
+.time { font-family: var(--f-num); font-weight: 700; font-size: 30px; color: #fff; margin-top: 4px; }
+.time.low { color: #ff4d4d; animation: blinkT .5s steps(2) infinite; }
+@keyframes blinkT { 50% { opacity: .4 } }
+.heat { display: flex; justify-content: center; gap: 4px; }
+.heat span { width: 26px; height: 26px; color: rgba(20,22,26,0.45); filter: drop-shadow(0 2px 3px rgba(0,0,0,.6)); }
+.heat span svg { width: 100%; height: 100%; display: block; }
+.heat span.on { color: #ffd23a; }
+.heat.bump span.on { animation: starPop .5s ease-out; }
+@keyframes starPop { 40% { transform: scale(1.5) } }
+.bust { margin: 8px auto 0; width: 100%; max-width: 280px; opacity: 0; transition: opacity .2s; }
+.bust.show { opacity: 1; }
+.bust span { display: block; text-align: center; font: 800 12px var(--f-body); color: #fff; text-shadow: 0 1px 3px #000; margin-bottom: 3px; }
+.bust b { display: block; height: 10px; border-radius: 5px; background: rgba(0,0,0,.55); border: 1px solid rgba(255,255,255,.4); overflow: hidden; }
+.bust i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #2f6fe0, #ff2d55); }
+.radio { position: absolute; left: 50%; top: 92px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: min(92vw, 560px); padding: 7px 14px; border-radius: 8px; background: rgba(12,20,40,0.82); border: 1px solid rgba(90,168,255,0.7); color: #dfeaff; font: 700 14px var(--f-body); opacity: 0; pointer-events: none; }
+.radio svg { width: 18px; height: 18px; flex: 0 0 auto; color: #5aa8ff; }
+.radio.show { animation: radioIn 3.4s ease-out forwards; }
+@keyframes radioIn { 0% { opacity: 0; transform: translate(-50%, -8px) } 8% { opacity: 1; transform: translate(-50%, 0) } 85% { opacity: 1 } 100% { opacity: 0 } }
+.hud-tr li { grid-template-columns: 20px 1fr auto; }
+.hud-tr li .ic svg { width: 18px; height: 18px; display: block; }
+.rtable td.n svg { width: 26px; height: 26px; display: block; }
+.rtable td.role-cop { color: #5aa8ff; }
+.rtable td.role-robber { color: #ff4d6d; }
+.rtable tr.won td { color: #fff; }
+.results .reason { margin: -6px 0 0; color: var(--yel); font: 700 15px var(--f-body); }
+body.touch .time { font-size: 18px; margin-top: 2px; }
+body.touch .role { font-size: 12px; padding: 2px 8px 2px 4px; } body.touch .role svg { width: 16px; height: 16px; }
+body.touch .heat span { width: 18px; height: 18px; }
+body.touch .radio { top: 54px; font-size: 12px; padding: 5px 10px; }
+@media (orientation: portrait) {
+  /* 縦持ちは上の真ん中が狭いので、速度の下（左）に手配度と逮捕ゲージを置く */
+  body.touch .hud-top { display: block; top: 192px; left: max(10px, env(safe-area-inset-left)); width: 130px; transform: none; right: auto; }
+  body.touch .hud-top .heat { justify-content: flex-start; gap: 2px; }
+  body.touch .hud-top .bust span { text-align: left; }
+  body.touch .radio { top: 96px; }
+}
+@media (max-height: 380px) { .roles .btn svg { width: 18px; height: 18px; } }
+
+/* スマホの遊び方: キーボードの表・パッド・全体図を省いて一画面に収める */
+@media (max-width: 760px), (max-height: 500px) {
+  #howto .howto-grid > div > h3, #howto .keys, #howto .pad:first-of-type, #howto #fullMap { display: none; }
+  #howto .howto-list { font-size: 13px; line-height: 1.5; gap: 6px; margin: 6px 0; }
+  #howto .pad { font-size: 11.5px; margin: 4px 0; }
+}
+@media (max-height: 500px) and (orientation: landscape) {
+  #howto .howto-grid { grid-template-columns: 1fr; gap: 4px; }
+  #howto .panel { padding-top: 10px; padding-bottom: 8px; }
+  #howto .pad { font-size: 10.5px; margin: 2px 0; }
+  #howto .howto-list { display: block; column-count: 2; column-gap: 22px; font-size: 12px; line-height: 1.42; margin: 0; }
+  #howto .howto-list li { break-inside: avoid; margin-bottom: 5px; }
+  #howto .panel-head { margin-bottom: 4px; }
+}
+/* 背の低い PC 画面の遊び方: 詰めて一画面に */
+@media (max-height: 620px) and (min-width: 761px) {
+  #howto .howto-list { font-size: 12.5px; line-height: 1.45; gap: 5px; margin: 6px 0; }
+  #howto .keys td { padding-top: 2px; padding-bottom: 2px; font-size: 12px; }
+  #howto kbd { padding: 1px 5px; font-size: 10px; }
+  #howto .pad { font-size: 11px; margin: 4px 0; }
+  #howto .pad:first-of-type { display: none; }
+  #howto .keys tr:nth-child(6) { display: none; }
+  #howto #fullMap { max-height: 420px; width: auto; }
+}
+
+/* ---------------------------------------------------------- 小さい画面: ガレージ・ロビー・遊び方・結果を枠の中のスクロールなしで一画面に収める */
+@media (max-width: 760px), (max-height: 600px) {
+  .panel-head { gap: 10px; padding-bottom: 8px; }
+  .panel-head h2 { font-size: 21px; }
+  .credits b { font-size: 18px; }
+  /* ガレージ: 車3台を横一列、塗装と見本を横並び、改造は1行ずつ */
+  #garage .panel { padding-top: 12px; padding-bottom: 12px; }
+  #garage .garage-grid { gap: 10px 14px; margin-top: 8px; }
+  #garage .garage-grid > div:first-child { display: grid; grid-template-columns: auto 1fr; gap: 6px 10px; align-items: center; align-content: start; }
+  #garage .garage-grid h3 { display: none; }
+  #garage .car-cards { grid-column: 1 / -1; gap: 6px; }
+  .car-card { padding: 6px 8px; }
+  .car-card b { font-size: 13px; }
+  .car-card span { font-size: 10px; line-height: 1.35; margin-top: 2px; }
+  .paints { display: grid; grid-template-columns: repeat(4, 24px); gap: 6px; }
+  .paints button { width: 24px; height: 24px; }
+  #carPreview { margin: 0; width: auto; max-width: 100%; height: 54px; justify-self: center; }
+  .stats { gap: 2px; margin-top: 0; }
+  .stat { grid-template-columns: 64px 1fr 38px; gap: 8px; font-size: 11px; line-height: 13px; }
+  .stat .bar { height: 6px; }
+  .stat b { font-size: 11px; }
+  #garage .garage-grid > div:last-child { display: flex; flex-direction: column; gap: 8px; }
+  .upgrades { grid-template-columns: 1fr; gap: 3px; }
+  .upg { padding: 3px 8px; gap: 1px 8px; align-items: center; }
+  .upg .nm { font-size: 12px; gap: 6px; white-space: nowrap; }
+  .pips i { width: 9px; height: 5px; }
+  .upg .tr { font-size: 9.5px; line-height: 1.3; white-space: nowrap; }
+  .upg .act { gap: 4px; }
+  .upg .act .btn { min-height: 26px; padding: 0 9px; font-size: 12px; white-space: nowrap; }
+  .upg .cost { font-size: 12px; min-width: 34px; }
+  /* ロビー */
+  .lead { font-size: 13px; line-height: 1.55; margin: 8px 0; }
+  .join-row, .invite, .lobby-row { margin-top: 8px; }
+  .join-row input { font-size: 20px; padding: 5px; }
+  .room-code { margin-top: 8px; }
+  .room-code b { font-size: 30px; }
+  .plist { margin-top: 8px; gap: 4px; }
+  .plist li { padding: 4px 10px; font-size: 13px; }
+  .plist li .nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .lobby-row .carpick button { padding: 7px 4px; }
+  .wait { margin-top: 8px; font-size: 13px; }
+  .err { min-height: 0; margin: 4px 0 0; }
+  /* 結果 */
+  .stamp { font-size: 28px; padding: 3px 12px; border-width: 4px; top: -12px; right: 14px; }
+  .results h2 { font-size: 22px; }
+  .rtable { margin: 8px 0; font-size: 13px; }
+  .rtable td { padding: 4px 8px; }
+  .rtable td.n { width: 34px; }
+  .rtable td.n svg { width: 20px; height: 20px; }
+  .rtable td.s { font-size: 11px; }
+  .earn { font-size: 15px; min-height: 20px; }
+}
+/* 横持ち: ガレージとロビーは2列 */
+@media (max-height: 600px) and (orientation: landscape) {
+  /* 左に 車・塗装・見本・性能、右に改造6つ */
+  #garage .garage-grid { grid-template-columns: auto 1fr 1.3fr; grid-template-rows: auto auto 1fr; align-items: start; }
+  #garage .garage-grid > div:first-child, #garage .garage-grid > div:last-child { display: contents; }
+  #garage .car-cards { grid-column: 1 / 3; grid-row: 1; }
+  #garage .paints { grid-column: 1; grid-row: 2; }
+  #garage #carPreview { grid-column: 2; grid-row: 2; align-self: center; }
+  #garage .stats { grid-column: 1 / 3; grid-row: 3; }
+  #garage .upgrades { grid-column: 3; grid-row: 1 / 4; }
+  .panel.lobby { width: min(760px, 100%); }
+  #lobbyRoom:not(.hidden) { display: grid; grid-template-columns: 1fr 1fr; column-gap: 16px; align-items: start;
+    grid-template-areas: "code car" "invite host" "leave host" "list list"; }
+  #lobbyRoom .room-code { grid-area: code; }
+  #lobbyRoom .invite { grid-area: invite; }
+  #lobbyRoom > .btns { grid-area: leave; margin-top: 8px; }
+  #lobbyRoom .lobby-row:not(.host-only) { grid-area: car; }
+  #lobbyRoom .host-only, #lobbyRoom .wait { grid-area: host; }
+  #lobbyRoom .plist { grid-area: list; grid-template-columns: 1fr 1fr; }
+  #lobbyRoom:not(.hidden) { row-gap: 6px; }
+  #lobbyRoom > * { margin-top: 0; margin-bottom: 0; }
+  #lobbyRoom .btn { min-height: 32px; }
+  #lobbyRoom > .btns .btn { flex: 0 1 auto; }
+  #lobbyRoom .btn.small { white-space: nowrap; }
+  #lobbyRoom .field { margin: 0; flex-direction: row; align-items: center; gap: 6px; }
+  #lobbyRoom .field select { padding: 4px 8px; font-size: 15px; }
+  #lobbyRoom .invite input { padding: 6px 8px; }
+  #lobbyRoom .room-code b { font-size: 26px; line-height: 1.1; }
+  #lobbyRoom .plist li { padding: 2px 8px; font-size: 12px; }
+  #lobbyEntry .btns { margin-top: 4px; }
+  /* 結果: 見出しと理由を1行、獲得とボタンを1行 */
+  .results .rhead { display: flex; align-items: baseline; justify-content: center; gap: 14px; }
+  .results .reason { margin: 0; }
+  .results .rfoot { display: flex; align-items: center; gap: 12px; }
+  .results .rfoot .earn { flex: 0 0 auto; }
+  .results .rfoot .btns { flex: 1; margin-top: 0; }
+}
+/* 低い横画面: 余白を詰める */
+@media (max-height: 400px) {
+  .panel { max-height: calc(100dvh - 16px); padding: 10px 14px; }
+  .screen { padding: 8px; }
+  .panel-head .btn.small { min-height: 30px; }
+  .rtable td { padding: 2px 8px; }
+  .results h2 { font-size: 19px; }
+  .stat { line-height: 12px; }
+  #carPreview { height: 40px; }
+  .panel-head h2 { font-size: 18px; }
+  .paints { grid-template-columns: repeat(8, 18px); gap: 5px; }
+  .paints button { width: 18px; height: 18px; }
+  .car-card { padding: 4px 7px; }
+  .upg { padding: 2px 8px; }
+  .upg .nm { font-size: 11.5px; line-height: 14px; }
+  .upg .tr { font-size: 9px; line-height: 11px; }
+  .upg .act .btn { min-height: 24px; }
+  #garage .garage-grid { row-gap: 5px; margin-top: 6px; }
+  .stats { gap: 1px; }
+  .stat > span { line-height: 12px; }
+  .car-card span { font-size: 9.5px; line-height: 1.25; }
+}
+/* 遊び方: 小さい画面 */
+@media (max-height: 500px) and (orientation: landscape) {
+  #howto .howto-list { column-count: 3; column-gap: 16px; font-size: 11px; line-height: 1.38; }
+  #howto .howto-list li { margin-bottom: 4px; }
+}
+@media (max-width: 760px) and (orientation: portrait) {
+  #howto .panel { padding: 14px 16px; }
+  #howto .howto-list { font-size: 12px; line-height: 1.45; gap: 5px; }
+}
+@media (max-height: 400px) and (orientation: landscape) {
+  #howto .howto-grid { margin-top: 4px; }
+  #howto .howto-list { font-size: 10px; line-height: 1.3; column-gap: 24px; }
+  #howto .howto-list li { margin-bottom: 3px; }
+  #howto .pad { font-size: 9.5px; line-height: 1.3; margin: 2px 0 0; }
+  #howto .pad.credit { font-size: 8.5px; }
+}
+@media (max-width: 760px) and (orientation: portrait) and (max-height: 700px) {
+  #howto .howto-list { font-size: 11.5px; line-height: 1.4; gap: 4px; margin: 4px 0; }
+  #howto .pad { font-size: 10.5px; line-height: 1.4; margin: 2px 0; }
+  #howto .pad.credit { font-size: 9px; }
+}
+
+/* ---------------------------------------------------------- 爽快感: 流れる線・ご褒美の文字・逮捕と逃げ切りの光 */
+.speedlines { position: absolute; inset: -12%; pointer-events: none; opacity: 0; transition: opacity .25s;
+  background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0) 0deg 4deg, rgba(255,255,255,0.5) 4.3deg, rgba(255,255,255,0) 4.8deg 11deg);
+  -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 50%, transparent 55%, #000 100%); mask-image: radial-gradient(ellipse 60% 55% at 50% 50%, transparent 55%, #000 100%);
+  animation: slFlick .14s steps(2) infinite; }
+.speedlines.boost { background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(127,212,255,0) 0deg 3deg, rgba(190,235,255,0.75) 3.3deg, rgba(127,212,255,0) 3.8deg 8deg);
+  -webkit-mask-image: radial-gradient(ellipse 55% 50% at 50% 50%, transparent 45%, #000 100%); mask-image: radial-gradient(ellipse 55% 50% at 50% 50%, transparent 45%, #000 100%); }
+@keyframes slFlick { 50% { transform: rotate(1.6deg) scale(1.02) } }
+.reward { position: absolute; left: 0; right: 0; top: 15%; text-align: center; pointer-events: none; opacity: 0; color: #ffd23a; transform: skewX(-10deg); }
+.reward b { font-family: var(--f-head); font-weight: 400; font-size: clamp(30px, 6vw, 66px); letter-spacing: 0.02em; text-shadow: 0 4px 0 #a8350d, 0 0 24px rgba(255,140,40,0.8); }
+.reward i { font-style: normal; font-family: var(--f-num); font-weight: 700; font-size: clamp(22px, 4vw, 42px); color: #fff; margin-left: 10px; text-shadow: 0 3px 0 #a8350d; }
+.reward small { display: block; font: 700 clamp(12px, 1.6vw, 18px) var(--f-num); color: #fff; text-shadow: 0 2px 4px #000; margin-top: 2px; }
+.reward.show { animation: rewardPop 1.3s ease-out forwards; }
+@keyframes rewardPop { 0% { opacity: 0; transform: skewX(-10deg) scale(2.2) } 12% { opacity: 1; transform: skewX(-10deg) scale(0.95) } 20% { transform: skewX(-10deg) scale(1) } 80% { opacity: 1 } 100% { opacity: 0; transform: skewX(-10deg) translateY(-18px) } }
+body.touch .reward { top: 30%; }
+@media (orientation: portrait) { body.touch .reward { top: 40%; } }
+.flashov { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.flashov.bust { animation: bustFlash 1.5s ease-out; }
+.flashov.escape { animation: escFlash 1.3s ease-out; background: radial-gradient(circle at 50% 55%, rgba(255,215,0,0.55), rgba(255,140,0,0) 70%); }
+@keyframes bustFlash { 0%, 30%, 60% { opacity: 0.55; background: rgba(255,30,60,0.45) } 15%, 45%, 75% { opacity: 0.55; background: rgba(40,110,255,0.45) } 100% { opacity: 0 } }
+@keyframes escFlash { 0% { opacity: 1 } 100% { opacity: 0 } }
+
+#touch .t-wire.aim { box-shadow: 0 0 0 3px rgba(255,255,255,0.85), 0 0 18px rgba(255,122,26,0.9); }
+/* ワイヤーの人の操作（右手）: 下がる・走る（スイッチ）・巻き取り・ジャンプ・ワイヤー（大） */
+.t-pedals { grid-template-columns: 88px 112px; grid-template-rows: 46px 46px 112px; grid-template-areas: "back run" "reel run" "jump wire"; }
+.t-pedals .t-back { grid-area: back; }
+.t-pedals .t-gas { grid-area: run; }
+.t-pedals .t-boost { grid-area: reel; }
+.t-pedals .t-jump { grid-area: jump; border-radius: 18px; padding: 16px; }
+.t-pedals .t-wire { grid-area: wire; border-radius: 50%; padding: 22px; background: rgba(255,122,26,0.42); border-color: rgba(255,170,90,0.95); }
+.t-pedals .t-wire.on { background: rgba(255,122,26,0.9); }
+.t-pedals .t-boost.ready { border-color: #7fd4ff; box-shadow: 0 0 12px rgba(127,212,255,0.7); }
+.t-pedals .t-boost.cool { opacity: 0.45; }
+@media (max-height: 430px) {
+  .t-pedals { grid-template-columns: 70px 92px; grid-template-rows: 38px 38px 92px; gap: 8px; }
+  .t-pedals .t-wire { padding: 18px; }
+}
+@media (max-width: 380px) {
+  .t-pedals { grid-template-columns: 72px 92px; grid-template-rows: 40px 40px 92px; gap: 8px; }
+  .t-dir { width: 76px; height: 76px; }
+}
+/* 縦持ちの狭い画面: 左右のボタンと右手のボタンが重ならないよう小さく */
+@media (max-width: 440px) and (orientation: portrait) {
+  .t-dir { width: 70px; height: 70px; padding: 14px; border-radius: 18px; }
+  .t-steer { gap: 8px; }
+  .t-pedals { grid-template-columns: 70px 92px; grid-template-rows: 42px 42px 92px; gap: 8px; }
+  .t-pedals .t-wire { padding: 18px; }
+}
+
+#rEarn .new { display: inline-block; background: var(--yel, #f2c230); color: #14161a; padding: 0 6px; border-radius: 4px; font-size: .8em; margin-left: 4px; animation: newpop .6s ease-out; }
+@keyframes newpop { from { transform: scale(1.8); opacity: 0 } to { transform: scale(1); opacity: 1 } }
+
+/* 通行人に見られているメーター（画面上の真ん中、逮捕ゲージの下） */
+#hud .eye { position: absolute; top: 92px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; padding: 4px 10px; border-radius: 999px; background: rgba(20,22,26,0.6); color: #ffd23a; font-size: 12px; font-weight: 700; opacity: 0; transition: opacity .2s; pointer-events: none; }
+#hud .eye.show { opacity: 1; }
+#hud .eye svg { width: 20px; height: 20px; }
+#hud .eye b { width: 90px; height: 6px; border-radius: 3px; background: rgba(255,255,255,0.2); overflow: hidden; display: block; }
+#hud .eye i { display: block; height: 100%; width: 0; background: #ffd23a; }
+#hud .eye.sneak { color: #9fd7ff; }
+#hud .eye.sneak i { background: #9fd7ff; }
+#touch [data-k=sneak].lit { background: rgba(80,160,255,0.75); border-color: #fff; }
+@media (max-height: 430px) { #hud .eye { top: 70px; } }

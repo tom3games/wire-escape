@@ -1,0 +1,248 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>WIRE ESCAPE</title>
+<meta name="description" content="手首のワイヤーで運河の街を飛び回り、パトカーとヘリから3分逃げ切る3Dアクション。地上で捕まれば終わり。捕獲ネット・落とし穴・ミサイル。スマホのブラウザで遊べる。">
+<meta property="og:title" content="WIRE ESCAPE">
+<meta property="og:description" content="ワイヤーで街を飛び回ってパトカーから逃げ切れ。地上で捕まれば終わり。スマホのブラウザで遊べる。">
+<meta property="og:type" content="website">
+<meta property="og:image" content="https://tom3games.github.io/wire-escape/og.jpg?v=1">
+<meta property="og:url" content="https://tom3games.github.io/wire-escape/">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#14161a">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Dela+Gothic+One&family=M+PLUS+1p:wght@500;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css?v=1">
+<script>
+  // 起動に失敗したときに原因を画面に出す（モジュールが読めないと module 内の catch は動かない）
+  window.__btrErrors = []
+  window.addEventListener('error', e => window.__btrErrors.push(String(e.message || e.error)))
+  window.addEventListener('unhandledrejection', e => window.__btrErrors.push(String(e.reason && e.reason.message || e.reason)))
+  setTimeout(() => {
+    if (window.__btrReady) return
+    const d = document.createElement('div')
+    d.id = 'bootfail'
+    d.textContent = '起動できませんでした / Failed to start: ' + (window.__btrErrors.join(' | ') || 'timeout') + '  [' + navigator.userAgent + ']'
+    document.body.appendChild(d)
+  }, 8000)
+</script>
+<script type="importmap">
+{ "imports": { "three": "./vendor/three.module.js" } }
+</script>
+</head>
+<body>
+<div id="view"></div>
+
+<!-- タイトル -->
+<section id="title" class="screen">
+  <div class="title-card">
+    <div class="hazard"></div>
+    <h1 class="logo"><span>WIRE</span><span class="logo-sub">//</span><span>ESCAPE</span></h1>
+    <p class="tagline" data-t="tagline"></p>
+    <p class="story" data-t="story"></p>
+    <label class="field"><span data-t="name"></span><input id="nameInput" maxlength="12" autocomplete="off" spellcheck="false"></label>
+    <div class="field-row">
+      <label class="field small"><span data-t="cpu"></span>
+        <select id="cpuSelect"></select>
+      </label>
+      <div class="carpick hidden" id="carPickShort"></div>
+    </div>
+    <div class="carpick stagepick hidden" id="stagePick"></div>
+    <div class="btns roles">
+      <button id="btnOffline" class="btn primary role-robber"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 21 19 4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M14 3.5l5.5.5.5 5.5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="5" cy="20" r="2.6" fill="currentColor"/></svg><span data-t="offline"></span></button>
+      <button id="btnOfflineCop" class="btn primary role-cop hidden"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2 4 5v6c0 5 3.4 9.4 8 11 4.6-1.6 8-6 8-11V5l-8-3z" fill="currentColor"/><path d="m12 7 1.5 3 3.3.5-2.4 2.3.6 3.3L12 14.6 9 16.1l.6-3.3-2.4-2.3 3.3-.5z" fill="#14161a"/></svg><span data-t="offlineCop"></span></button>
+    </div>
+    <div class="btns hidden">
+      <button id="btnOnline" class="btn" data-t="onlineSoon" disabled></button>
+    </div>
+    <p class="note hidden" id="onlineNote"></p>
+    <div class="btns">
+      <button id="btnGarage" class="btn ghost hidden" data-t="garage"></button>
+      <button id="btnHowto" class="btn ghost" data-t="howto"></button>
+    </div>
+    <div class="foot">
+      <button id="btnLang" class="link" data-t="lang"></button>
+      <button id="btnMute" class="link"></button>
+    </div>
+  </div>
+</section>
+
+<!-- ガレージ -->
+<section id="garage" class="screen hidden">
+  <div class="panel wide">
+    <header class="panel-head"><h2 data-t="garage"></h2><div class="credits"><span data-t="credits"></span> <b id="gCredits">0</b></div><button class="btn ghost small" data-back data-t="back"></button></header>
+    <div class="garage-grid">
+      <div>
+        <h3 data-t="cars"></h3>
+        <div id="carCards" class="car-cards"></div>
+        <h3 data-t="paint"></h3>
+        <div id="paints" class="paints"></div>
+        <canvas id="carPreview" width="360" height="200"></canvas>
+      </div>
+      <div>
+        <div id="stats" class="stats"></div>
+        <h3 data-t="upgrades"></h3>
+        <div id="upgrades" class="upgrades"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- オンラインのロビー -->
+<section id="lobby" class="screen hidden">
+  <div class="panel lobby">
+    <header class="panel-head"><h2 data-t="online"></h2><span class="net" id="netStatus"></span><button class="btn ghost small" id="btnLobbyBack" data-t="back"></button></header>
+    <div id="lobbyEntry">
+      <p class="lead" data-t="onlineLead"></p>
+      <div class="btns"><button id="btnCreate" class="btn primary" data-t="createRoom"></button></div>
+      <div class="join-row">
+        <input id="codeInput" maxlength="4" placeholder="ABCD" autocomplete="off" spellcheck="false" aria-label="code">
+        <button id="btnJoin" class="btn" data-t="joinRoom"></button>
+      </div>
+      <p class="err" id="lobbyErr"></p>
+    </div>
+    <div id="lobbyRoom" class="hidden">
+      <div class="room-code"><span data-t="roomCode"></span><b id="roomCode">----</b></div>
+      <div class="invite"><input id="inviteLink" readonly aria-label="invite"><button id="btnCopy" class="btn small" data-t="copy"></button></div>
+      <ul class="plist" id="plist"></ul>
+      <div class="lobby-row">
+        <div class="carpick" id="carPickLobby"></div>
+        <button id="btnLobbyGarage" class="btn ghost small" data-t="garage"></button>
+      </div>
+      <div class="lobby-row host-only">
+        <div class="carpick stagepick hidden" id="stagePickLobby"></div>
+        <label class="field small"><span data-t="cpu"></span><select id="cpuOnline"></select></label>
+        <button id="btnStartOnline" class="btn primary" data-t="start"></button>
+      </div>
+      <p class="wait guest-only" data-t="waitHost"></p>
+      <div class="btns"><button id="btnLeave" class="btn ghost" data-t="leaveRoom"></button></div>
+    </div>
+  </div>
+</section>
+
+<!-- 遊び方 -->
+<section id="howto" class="screen hidden">
+  <div class="panel wide">
+    <header class="panel-head"><h2 data-t="howtoTitle"></h2><button class="btn ghost small" data-back data-t="back"></button></header>
+    <div class="howto-grid">
+      <ol class="howto-list">
+        <li data-t="howto1"></li><li data-t="howto2"></li><li data-t="howto3"></li>
+        <li data-t="howto4"></li><li data-t="howto5"></li><li data-t="howto6"></li>
+      </ol>
+      <div>
+        <h3 data-t="keys"></h3>
+        <table class="keys">
+          <tr><td><kbd>W</kbd><kbd>↑</kbd></td><td data-t="kAccel"></td></tr>
+          <tr><td><kbd>S</kbd><kbd>↓</kbd></td><td data-t="kBrake"></td></tr>
+          <tr><td><kbd>A</kbd><kbd>D</kbd></td><td data-t="kSteer"></td></tr>
+          <tr><td><kbd>Space</kbd></td><td data-t="kDrift"></td></tr>
+          <tr><td><kbd>Shift</kbd></td><td data-t="kBoost"></td></tr>
+          <tr><td><kbd>E</kbd><kbd>K</kbd><kbd>Click</kbd></td><td data-t="kAir"></td></tr>
+          <tr><td><kbd>X</kbd><kbd>Ctrl</kbd></td><td data-t="kSneak"></td></tr>
+          <tr><td><kbd>R</kbd></td><td data-t="kRespawn"></td></tr>
+          <tr><td><kbd>Esc</kbd></td><td data-t="kPause"></td></tr>
+          <tr><td><kbd>C</kbd></td><td data-t="kCam"></td></tr>
+          <tr><td><kbd>M</kbd></td><td data-t="kMute"></td></tr>
+        </table>
+        <p class="pad" data-t="pad"></p>
+        <p class="pad" data-t="hintTouch"></p>
+        <p class="pad credit">Car model: “Car Concept” by Eric Chadwick / Darmstadt Graphics Group, CC BY 4.0（Khronos glTF Sample Assets。ロゴを外し軽量化）。Sky &amp; textures: Poly Haven（CC0）</p>
+      </div>
+      <canvas id="fullMap" width="300" height="520"></canvas>
+    </div>
+  </div>
+</section>
+
+<!-- レース中の表示 -->
+<section id="hud" class="hidden">
+  <div class="hud-tl">
+    <div class="role" id="hRole"></div>
+    <div class="time" id="hTime">3:00</div>
+    <div class="nextcp" id="hNext"></div>
+  </div>
+  <div class="hud-top"><div class="heat" id="hHeat"></div><div class="bust" id="hBust"><span></span><b><i></i></b></div></div>
+  <div class="radio" id="hRadio"></div>
+  <div class="eye" id="hEye"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/></svg><b><i></i></b><span data-t="eyeWatch"></span></div>
+  <ol class="hud-tr" id="hStand"></ol>
+  <canvas id="miniMap" width="220" height="220"></canvas>
+  <div class="hud-bl">
+    <svg id="dmgSvg" viewBox="0 0 120 200" width="84" height="140" aria-hidden="true">
+      <path id="dBody" d="M60 8a18 18 0 1 1 0 36a18 18 0 1 1 0-36zM38 52h44c8 0 14 6 14 14v54c0 5-4 8-8 8h-2v58c0 5-4 8-9 8h-6c-4 0-7-3-7-7v-52h-8v52c0 4-3 7-7 7h-6c-5 0-9-3-9-8v-58h-2c-4 0-8-3-8-8V66c0-8 6-14 14-14z" />
+    </svg>
+    <div class="dmg-list" id="dmgList"></div>
+  </div>
+  <div class="hud-br">
+    <div class="speed"><b id="hSpeed">0</b><span>km/h</span></div>
+    <div class="boost"><div class="boost-fill" id="hBoost"></div><div class="boost-win" id="hBoostWin"></div><span id="hBoostLbl">NITRO</span></div>
+  </div>
+  <div class="dmg-mini" aria-hidden="true"><i id="hBodyBar"></i></div>
+  <div class="speedlines" id="hSpeedLines"></div>
+  <div class="flashov" id="hFlash"></div>
+  <div class="center-msg" id="hMsg"></div>
+  <div class="reward" id="hReward"></div>
+  <div class="stunt-feed" id="hFeed"></div>
+  <div class="count" id="hCount"></div>
+  <div class="hint" id="hHint"></div>
+  <div class="vignette" id="hVig"></div>
+</section>
+
+<!-- スマホの操作 -->
+<section id="touch" class="hidden">
+  <div class="t-steer">
+    <button data-k="left" class="t-dir" aria-label="left"><svg viewBox="0 0 48 48"><path d="M30 10 16 24l14 14" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button data-k="right" class="t-dir" aria-label="right"><svg viewBox="0 0 48 48"><path d="M18 10l14 14-14 14" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+  </div>
+  <div class="t-top">
+    <button data-k="sneak" aria-label="sneak"><svg viewBox="0 0 24 24"><path d="M2 12s3.6-6 10-6 10 6 10 6-3.6 6-10 6S2 12 2 12z" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="12" r="3" fill="currentColor"/><path d="M4 20 20 4" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg></button>
+    <button data-k="respawn" aria-label="respawn"><svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 1 0 2.4-5.7M4 4v5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button data-k="cam" aria-label="camera"><svg viewBox="0 0 24 24"><rect x="3" y="7" width="18" height="12" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="12" cy="13" r="3.2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M8 7l1.5-2.5h5L16 7" fill="none" stroke="currentColor" stroke-width="2"/></svg></button>
+    <button data-k="pause" aria-label="pause"><svg viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1" fill="currentColor"/></svg></button>
+  </div>
+  <div class="t-pedals">
+    <button data-k="brake" class="t-small t-back" aria-label="back"><svg viewBox="0 0 48 48"><path d="M24 10v28M12 26l12 12 12-12" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button data-k="gas" class="t-gas" aria-label="run"><svg viewBox="0 0 48 48"><circle cx="28" cy="8" r="4.5" fill="currentColor"/><path d="M20 18l8-2 5 7 7 2M28 16l-4 12 7 5-2 11M24 28l-6 5-8-1M20 18l-6 6" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button data-k="boost" class="t-small t-boost" aria-label="reel"><svg viewBox="0 0 48 48"><circle cx="16" cy="32" r="9" fill="none" stroke="currentColor" stroke-width="3.5"/><circle cx="16" cy="32" r="2.5" fill="currentColor"/><path d="M22 25 40 7M30 7h10v10" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+    <button data-k="jump" class="t-jump" aria-label="jump"><svg viewBox="0 0 48 48"><path d="M24 40V12M12 22 24 10l12 12" fill="none" stroke="currentColor" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 42h24" stroke="currentColor" stroke-width="4" stroke-linecap="round"/></svg></button>
+    <button data-k="wire" class="t-wire" aria-label="wire"><svg viewBox="0 0 48 48"><path d="M10 40 36 10" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 0"/><path d="M30 6l10 2 2 10" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/><circle cx="10" cy="40" r="5" fill="currentColor"/></svg></button>
+  </div>
+</section>
+
+<!-- ポーズ -->
+<section id="pause" class="screen hidden">
+  <div class="panel narrow">
+    <h2 data-t="paused"></h2>
+    <div class="btns col">
+      <button id="btnResume" class="btn primary" data-t="resume"></button>
+      <button id="btnRespawn" class="btn" data-t="respawn"></button>
+      <button id="btnHowto2" class="btn ghost" data-t="howto"></button>
+      <button id="btnRetire" class="btn ghost" data-t="retire"></button>
+    </div>
+  </div>
+</section>
+
+<!-- 結果 -->
+<section id="results" class="screen hidden">
+  <div class="panel wide results">
+    <div class="stamp" id="rStamp"></div>
+    <div class="rhead"><h2 id="rTitle"></h2><p class="reason" id="rReason"></p></div>
+    <table class="rtable"><tbody id="rBody"></tbody></table>
+    <div class="rfoot">
+      <div class="earn" id="rEarn"></div>
+      <div class="btns">
+        <button id="btnAgain" class="btn primary" data-t="again"></button>
+        <button id="btnRGarage" class="btn hidden" data-t="toGarage"></button>
+        <button id="btnRTitle" class="btn ghost" data-t="toTitle"></button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script type="module" src="js/main.js?v=1"></script>
+</body>
+</html>
