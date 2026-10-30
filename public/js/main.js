@@ -20,7 +20,9 @@ import { Q, LOW } from './quality.js'
 import { Online } from './online.js'
 import { Touch } from './touch.js'
 import { RunnerModel } from './runnermodel.js'
-import { findAnchor, RUN } from '../shared/runner.js'
+import { findAnchor, rayHit, RUN } from '../shared/runner.js'
+import { setTrafficSpeed } from '../shared/traffic.js'
+setTrafficSpeed(0.55) // 一般車は遅め（本人「車早すぎ」）
 
 const $ = id => document.getElementById(id)
 const STEP = GAME.step
@@ -281,7 +283,7 @@ let msgTimer = 0
 let demoSwitch = 0
 let copLastRadio = -1
 
-const cam = { pos: new THREE.Vector3(0, 10, -20), look: new THREE.Vector3(), off: new THREE.Vector3(0, 3.5, -9), lookOff: new THREE.Vector3(0, 1, 0), hd: 0, fov: 64 }
+const cam = { pos: new THREE.Vector3(0, 10, -20), look: new THREE.Vector3(), off: new THREE.Vector3(0, 3.5, -9), lookOff: new THREE.Vector3(0, 1, 0), hd: 0, fov: 64, pitch: 0, userT: -1e9 }
 
 function startRace({ demo = false, view = null } = {}) {
   // 前の車を片付ける
@@ -292,7 +294,7 @@ function startRace({ demo = false, view = null } = {}) {
   seenBroken = new Set()
   placeProps()
 
-  race = new Chase(world, { seed: view && view.seed != null ? view.seed : (Math.random() * 1e9) | 0, ...(view && view.timeLimit ? { timeLimit: view.timeLimit } : {}), backup: !view && !demo })
+  race = new Chase(world, { seed: view && view.seed != null ? view.seed : (Math.random() * 1e9) | 0, ...(view && view.timeLimit ? { timeLimit: view.timeLimit } : {}), backup: !view && !demo, footCops: !view })
   for (const g of built.gates) g.grp.visible = false // レースのゲートは使わない
   me = null
   autopilot = null
@@ -352,7 +354,7 @@ function startRace({ demo = false, view = null } = {}) {
 
 // 車の見た目。警察は屋根に赤と青の回転灯をのせる
 function makeModel(e, paint) {
-  if (e.car.isRunner) return new RunnerModel()
+  if (e.car.isRunner) return new RunnerModel({ police: e.role === 'cop' })
   const m = new CarModel(e.car.carId, paint)
   if (e.role === 'cop') addPoliceLights(m)
   return m
@@ -696,6 +698,45 @@ $('btnHowto2').onclick = () => show('howto')
 $('btnRetire').onclick = () => { paused = false; menuOpen = false; if (onlineRace && online) online.leave(); toTitle() }
 let wantRespawn = false
 let tapLatch = {}
+let pendingWire = null
+// 画面（ボタン・スティック以外）の操作: 軽くタッチ（クリック）= その建物へワイヤー、なぞる = カメラを回す
+// （2026-10-30 本人「画面タッチでワイヤー出して」「カメラ移動は自分でスワイプでやりたい」）
+const _ray = new THREE.Raycaster(), _ndc = new THREE.Vector2()
+const gest = new Map() // pointerId -> { x, y, lx, ly, t, moved }
+function aimWireAt(cx, cy) {
+  const rc = renderer.domElement.getBoundingClientRect()
+  _ndc.set((cx - rc.left) / rc.width * 2 - 1, -((cy - rc.top) / rc.height) * 2 + 1)
+  _ray.setFromCamera(_ndc, camera)
+  const o = _ray.ray.origin, d = _ray.ray.direction
+  pendingWire = { at: rayHit(world, o.x, o.y, o.z, d.x, d.y, d.z, 400) }
+}
+document.addEventListener('pointerdown', e => {
+  if (mode !== 'race' || !me || !me.isRunner || paused || menuOpen) return
+  if (e.pointerType === 'mouse' && e.button !== 0) return
+  if (e.target.closest && e.target.closest('button, input, select, a, .t-stickzone, .panel')) return
+  gest.set(e.pointerId, { x: e.clientX, y: e.clientY, lx: e.clientX, ly: e.clientY, t: performance.now(), moved: false })
+  audio.start()
+}, { capture: true })
+document.addEventListener('pointermove', e => {
+  const g = gest.get(e.pointerId)
+  if (!g) return
+  const dx = e.clientX - g.lx, dy = e.clientY - g.ly
+  g.lx = e.clientX; g.ly = e.clientY
+  if (!g.moved && Math.hypot(e.clientX - g.x, e.clientY - g.y) > 12) g.moved = true
+  if (!g.moved) return
+  // 右へなぞると右を向く。上下はカメラの高さ（下へなぞると上から見下ろす）
+  cam.hd -= dx * 0.006
+  cam.pitch = Math.max(-0.35, Math.min(1, cam.pitch + dy * 0.004))
+  cam.userT = performance.now()
+}, { capture: true })
+const endGesture = e => {
+  const g = gest.get(e.pointerId)
+  if (!g) return
+  gest.delete(e.pointerId)
+  if (!g.moved && performance.now() - g.t < 400 && mode === 'race' && me && !paused) aimWireAt(e.clientX, e.clientY)
+}
+document.addEventListener('pointerup', endGesture, { capture: true })
+document.addEventListener('pointercancel', e => gest.delete(e.pointerId), { capture: true })
 let autopilot = null // 検証用: 自車を CPU に運転させる
 input.onKey = code => {
   if (code === 'Escape' || code === 'KeyP') { if (mode === 'race') setPause(!paused); return }
@@ -1049,7 +1090,23 @@ function frame() {
     if (inp && menuOpen) inp = { throttle: 0, brake: 0.3, steer: 0 }
     if (inp && wantRespawn) { inp.respawn = true; wantRespawn = false }
     // 押した印は、物理が進むコマまで持ち越す（120Hz の画面では物理が進まないコマがあり、そこで押したものが消えないように）
-    if (inp) for (const k of ['jump', 'wire', 'sneak', 'boost']) if (inp[k]) tapLatch[k] = true
+    // スマホのスティック: 倒した向き（カメラから見て）へ走る。ワイヤー中にワイヤーの方へ倒すと巻き取り
+    if (inp && me && me.isRunner && touch.active && touch.stick && touch.stick.mag > 0.15) {
+      const S = touch.stick
+      const desired = cam.hd - Math.atan2(S.x, S.y)
+      let diff = desired - me.yaw
+      while (diff > Math.PI) diff -= Math.PI * 2
+      while (diff < -Math.PI) diff += Math.PI * 2
+      inp.throttle = Math.max(inp.throttle, Math.min(1, S.mag * 1.3))
+      inp.steer = Math.max(-1, Math.min(1, -diff * 2.5))
+      if (me.rope && S.mag > 0.5) {
+        const ad = Math.atan2(me.rope.x - me.x, me.rope.z - me.z)
+        if (Math.cos(desired - ad) > 0.8) inp.boost = true
+      }
+    }
+    // 画面をタッチ・クリックした: その場所の建物へワイヤー（ワイヤー中なら外す）
+    if (inp && pendingWire) { inp.wire = true; if (pendingWire.at) inp.wireAt = pendingWire.at; pendingWire = null }
+    if (inp) for (const k of ['jump', 'wire', 'sneak', 'boost', 'wireAt']) if (inp[k]) tapLatch[k] = inp[k]
     let first = true
     let steps = 0
     while (acc >= STEP && steps < 6) {
@@ -1170,7 +1227,7 @@ function frame() {
     const f = me || follow
     let near = 1e9
     if (f) for (const e of race.cops) if (e.car !== f && !e.left) near = Math.min(near, Math.hypot(e.car.x - f.x, e.car.z - f.z))
-    let v = Math.max(0, 1 - near / 240)
+    let v = race.footCops ? 0 : Math.max(0, 1 - near / 240) // 走る警官はサイレンを鳴らさない
     if (me && me.role === 'cop') v = Math.max(v, 0.32)
     if (mode === 'title') v *= 0.35
     if (race.phase === 'done') v *= 0.5
@@ -1289,9 +1346,15 @@ function raceEvent(ev) {
   }
   if (ev.t === 'scream') {
     const near = Math.hypot(me.x - ev.x, me.z - ev.z)
-    if (near < 60) audio.scream(Math.max(0.2, 1 - near / 60))
+    if (near < 60) audio.scream(Math.max(0.25, 1 - near / 60))
+    const p = race.peds && race.peds.list[ev.id]
+    if (p) say(pick(LINES.scream), p, 'scream', 1.8)
   }
+  if (ev.t === 'charge') { const p = race.peds && race.peds.list[ev.id]; if (p) { say(pick(LINES.charge), p, 'normal', 1.3); audio.grunt(0.7, true) } }
+  if (ev.t === 'tackle') { const p = race.peds && race.peds.list[ev.id]; if (p) setTimeout(() => say(pick(LINES.ouch), p, 'normal', 1.6), 500) }
   if (ev.t === 'witness') {
+    const wp = race.peds && race.peds.list[ev.id]
+    if (wp) say(pick(LINES.call), wp, 'normal', 1.8)
     hud.radio(t('radioWitness').replace('{area}', trArea(ev.area)), 2.6); audio.radio()
     if (!race._witnessOnce) { race._witnessOnce = true; hud.message(t('msgWitness'), t('msgWitnessSub'), 2) }
   }
@@ -1392,7 +1455,8 @@ function lerpAngle(a, b, k) {
 // ---------------------------------------------------------------- ワイヤーの人（ワイヤー・狙い・ネット・落とし穴）
 const ropeMesh = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1, 6).translate(0, 0.5, 0).rotateX(Math.PI / 2), new THREE.MeshBasicMaterial({ color: 0xf4f1ea }))
 ropeMesh.visible = false; ropeMesh.frustumCulled = false
-scene.add(ropeMesh)
+const ropePool = []
+const copRopeMat = new THREE.MeshBasicMaterial({ color: 0x8fd0ff })
 // 掛けられる点の印（前の上の建物に出る橙の輪）
 const aimMark = new THREE.Group()
 {
@@ -1475,6 +1539,8 @@ function drawPeds(now) {
     const run = p.state === 'flee' || p.state === 'charge' || p.state === 'scream'
     const bob = Math.abs(Math.sin(now / (run ? 90 : 220) + p.id)) * (run ? 0.08 : 0.03)
     if (p.state === 'down') _pe.set(-Math.PI / 2, p.yaw, 0, 'YXZ')
+    else if (p.state === 'scream' || p.state === 'flee') _pe.set(-0.15 + Math.sin(now / 45 + p.id) * 0.12, p.yaw, Math.sin(now / 60 + p.id) * 0.35, 'YXZ') // 情けなくジタバタ
+    else if (p.state === 'charge') _pe.set(0.55, p.yaw, 0, 'YXZ')
     else _pe.set(run ? 0.35 : 0, p.yaw, 0, 'YXZ')
     _pq4.setFromEuler(_pe)
     _pp1.set(p.x, p.y + (p.state === 'down' ? 0.2 : bob), p.z)
@@ -1497,21 +1563,99 @@ function drawPeds(now) {
   for (; k < marks.length; k++) marks[k].visible = false
 }
 
+// マンガの吹き出し（SNS で見て笑える一言）。人や警官の頭の上についていく
+const LINES = {
+  scream: ['キャーーッ！', 'ひぃぃぃっ！', 'ママーーッ！', 'だれかーっ！', 'ぎゃああ！', 'なになになに!?'],
+  call: ['もしもし警察!?', '110番110番！', '空に変な人が！'],
+  charge: ['とりゃーっ！', '捕まえたる！', 'まてコラーッ！'],
+  ouch: ['あいたた…', 'なんで…', 'へぶっ'],
+  cop: ['待てーっ！', '止まれー！', '逃がすなー！', 'こらーっ！', '確保ぉー！'],
+  stomped: ['ぐえっ', 'ふぎゃっ', 'むぎゅ'],
+  netted: ['うわっ!?', 'からまった！'],
+  pit: ['あーれー', 'なんで穴!?'],
+  hit: ['ぎゃっ', 'いったぁ！']
+}
+const pick = a => a[Math.floor(Math.random() * a.length)]
+const bubblePool = []
+function bubbleTex(text, kind) {
+  const cv = document.createElement('canvas'); cv.width = 512; cv.height = 160
+  const g = cv.getContext('2d')
+  const font = '900 64px "Dela Gothic One", "M PLUS 1p", sans-serif'
+  g.font = font
+  const w = Math.min(480, g.measureText(text).width + 56)
+  const x0 = (512 - w) / 2
+  const bg = kind === 'cop' ? '#dff0ff' : kind === 'scream' ? '#fff2a8' : '#ffffff'
+  g.fillStyle = bg
+  g.strokeStyle = '#14161a'; g.lineWidth = 7
+  g.beginPath(); g.roundRect(x0, 10, w, 104, 44); g.fill(); g.stroke()
+  // しっぽ
+  g.beginPath(); g.moveTo(236, 110); g.lineTo(256, 150); g.lineTo(278, 110); g.closePath(); g.fill(); g.stroke()
+  g.fillStyle = bg; g.fillRect(240, 103, 34, 12) // 吹き出しとしっぽの境目の線を消す
+  g.fillStyle = kind === 'scream' ? '#e2241b' : kind === 'cop' ? '#1d3a8a' : '#14161a'
+  g.font = font; g.textAlign = 'center'; g.textBaseline = 'middle'
+  g.fillText(text, 256, 64, w - 30)
+  const t = new THREE.CanvasTexture(cv); t.colorSpace = THREE.SRGBColorSpace
+  return t
+}
+function say(text, follow, kind = 'normal', life = 1.6) {
+  if (!follow) return
+  const m = me ? Math.hypot(follow.x - me.x, follow.z - me.z) : 0
+  if (m > 90) return
+  let b = bubblePool.find(b => b.life <= 0)
+  if (!b) {
+    if (bubblePool.length >= 10) b = bubblePool.reduce((a, c) => c.life < a.life ? c : a)
+    else { const s = new THREE.Sprite(new THREE.SpriteMaterial({ depthTest: false, transparent: true })); s.renderOrder = 30; scene.add(s); b = { s }; bubblePool.push(b) }
+  }
+  if (b.s.material.map) b.s.material.map.dispose()
+  b.s.material.map = bubbleTex(text, kind); b.s.material.needsUpdate = true
+  Object.assign(b, { life, max: life, follow })
+  b.s.visible = true
+}
+function updateBubbles(dt) {
+  for (const b of bubblePool) {
+    if (b.life <= 0) { b.s.visible = false; continue }
+    b.life -= dt
+    const f = b.follow
+    const pop = Math.min(1, (b.max - b.life) * 8) // ぽんっと出る
+    const d = camera.position.distanceTo(_v.set(f.x, f.y, f.z))
+    const sc = Math.max(1.1, d * 0.055) * (0.6 + 0.4 * pop) * (1 + Math.sin((b.max - b.life) * 30) * 0.04 * (b.life > b.max - 0.4 ? 1 : 0))
+    b.s.scale.set(sc * 3.2, sc, 1)
+    b.s.position.set(f.x, f.y + 2.4 + sc * 0.35, f.z)
+    b.s.material.opacity = Math.min(1, b.life * 4)
+  }
+}
+let copShoutT = 0
+
 function updateRunnerFx(dt, now) {
   drawPeds(now)
+  updateBubbles(dt)
+  // 近くの警官がときどき叫ぶ
+  copShoutT -= dt
+  if (me && race && race.phase === 'racing' && copShoutT <= 0 && race.footCops) {
+    let best = null, bd = 30
+    for (const e of race.cops) { const c = e.car; if (e.left || c.wreck > 0) continue; const d = Math.hypot(c.x - me.x, c.z - me.z); if (d < bd) { bd = d; best = c } }
+    if (best) { say(pick(LINES.cop), best, 'cop', 1.4); audio.whistle(0.6); copShoutT = 4 + Math.random() * 3 } else copShoutT = 1
+  }
   // しゃがみ歩きのボタンは入っている間だけ光らせる
   const snb = document.querySelector('#touch [data-k=sneak]')
   if (snb && me && snb._on !== !!me.sneaking) { snb._on = !!me.sneaking; snb.classList.toggle('lit', snb._on) }
   const r = race && race.robbers.find(e => e.car.isRunner)?.car
   const m = r && models.get(r.id)
-  // ワイヤー
-  if (r && r.rope && m) {
-    const h = m.handWorld
-    ropeMesh.visible = true
-    ropeMesh.position.copy(h)
-    ropeMesh.lookAt(r.rope.x, r.rope.y, r.rope.z)
-    ropeMesh.scale.set(1, 1, Math.max(0.1, h.distanceTo(_v.set(r.rope.x, r.rope.y, r.rope.z))))
-  } else ropeMesh.visible = false
+  // ワイヤー（犯人も、ワイヤーを使う警官も）
+  let ri = 0
+  if (race) for (const e of race.entries) {
+    const c = e.car, mm = models.get(e.id)
+    if (!c.isRunner || !c.rope || !mm) continue
+    const rm = ropePool[ri] || (ropePool[ri] = (() => { const x = ropeMesh.clone(); x.material = e.role === 'cop' ? copRopeMat : ropeMesh.material; scene.add(x); return x })())
+    ri++
+    rm.material = e.role === 'cop' ? copRopeMat : ropeMesh.material
+    const h = mm.handWorld
+    rm.visible = true
+    rm.position.copy(h)
+    rm.lookAt(c.rope.x, c.rope.y, c.rope.z)
+    rm.scale.set(1, 1, Math.max(0.1, h.distanceTo(_v.set(c.rope.x, c.rope.y, c.rope.z))))
+  }
+  for (let i = ri; i < ropePool.length; i++) ropePool[i].visible = false
   // 狙い: 自分が操作していて、ワイヤーを出していないときだけ
   aimT -= dt
   if (me && me.isRunner && mode === 'race' && race.phase !== 'done' && !me.rope && me.wreck <= 0 && !(me.net > 0)) {
@@ -1585,20 +1729,24 @@ function runnerEvent(c, ev, mine, vol) {
       if (vol) audio.crash(Math.min(1.2, ev.speed / 20) * vol)
       fx.sparks(ev.x, ev.y, ev.z, 10, null, 6)
       if (mine) { fx.addShake(Math.min(1.1, ev.speed / 20)); hud.flashDamage(ev.dmg * 2); hitStop(0.06); if (!race._hitOnce) { race._hitOnce = true; hud.message(t('msgCarHit'), t('msgCarHitSub'), 1.6) } }
+      say(pick(LINES.hit), c, 'normal', 1.2); audio.grunt(0.8, true)
       return true
     case 'stomp':
       if (vol) audio.stomp()
       fx.flash(ev.x, ev.y, ev.z); fx.sparks(ev.x, ev.y, ev.z, 40, null, 12)
       for (let i = 0; i < 8; i++) fx.smoke(ev.x, ev.y, ev.z, { dark: 0.2, size: 2.2, life: 1.6, vy: 2.5, a: 0.6 })
       if (mine) { fx.addShake(1.1); hitStop(0.09); slowMo(0.35, 0.6); reward(ev.cop ? 'STOMP!' : 'BOUNCE', ev.cop ? t('stompSub') : '') }
+      { const o = race.entry(ev.other); if (o && o.car.isRunner) { say(pick(LINES.stomped), o.car, 'normal', 1.5); audio.grunt(1) } }
       return true
     case 'netted':
       if (mine) { hud.message(t('msgNetted'), t('msgMash'), 1.4); audio.netWrap(); fx.addShake(0.6); hud.flashDamage(0.15) }
+      say(pick(LINES.netted), c, 'normal', 1.4)
       return true
     case 'struggle': if (mine) audio.tick(); return true
     case 'netFree': if (mine) { hud.toast(t('msgNetFree')); audio.whip() } return true
     case 'fellPit':
       if (mine) { hud.message(t('msgPit'), t('msgPitHint'), 1.4); audio.land(14); fx.addShake(0.8) }
+      say(pick(LINES.pit), c, 'normal', 1.6)
       fx.dust(c.x, c.y + 2, c.z, 10, [0.45, 0.4, 0.33], 1.2)
       return true
     case 'pitOut': if (mine) audio.whip(); return true
@@ -1606,6 +1754,7 @@ function runnerEvent(c, ev, mine, vol) {
       for (let i = 0; i < 24; i++) fx.emit(ev.x, -0.8, ev.z, { vx: (Math.random() - 0.5) * 6, vy: 4 + Math.random() * 6, vz: (Math.random() - 0.5) * 6, life: 0.9, size: 0.5, grow: 0.4, r: 0.75, g: 0.88, b: 1, a: 0.8 })
       if (vol) audio.splash()
       if (mine) hud.message(t('msgSplash'), '', 1.4)
+      say('ぶくぶく…', { x: ev.x, y: 0, z: ev.z }, 'normal', 1.4)
       return true
     case 'wreck':
       fx.flash(c.x, c.y + 0.8, c.z)
@@ -1613,6 +1762,7 @@ function runnerEvent(c, ev, mine, vol) {
       if (mine) { hud.message(t('msgDown'), t('msgDownSub'), 1.8); fx.addShake(1) }
       return true
     case 'tackled':
+      say(pick(LINES.hit), c, 'normal', 1.2)
       if (mine) { hud.message(t('msgTackled'), t('msgTackledSub'), 1.3); fx.addShake(0.6); audio.land(10); hud.flashDamage(0.1) }
       return true
     case 'sneak': if (mine) hud.toast(ev.on ? t('msgSneakOn') : t('msgSneakOff')); return true
@@ -1641,7 +1791,10 @@ function updateCamera(dt) {
     const l = Math.hypot(hx, hz); hx /= l; hz /= l
   }
   // 向きはなめらかに追う（位置は車にぴったり付ける。速いほど遠くに置いていかれる遅れを無くした）
-  cam.hd = lerpAngle(cam.hd, Math.atan2(hx, hz), 1 - Math.exp(-dt * 7))
+  // スマホ（スティック操作）はカメラを自分で回す（追いかけない）。PC はなぞってから 1.5 秒たつと後ろへ戻る
+  const manual = c === me && c.isRunner && (touchMode || performance.now() - cam.userT < 1500)
+  if (!manual) cam.hd = lerpAngle(cam.hd, Math.atan2(hx, hz), 1 - Math.exp(-dt * 7))
+  if (!manual && !touchMode) cam.pitch *= Math.exp(-dt * 2)
   hx = Math.sin(cam.hd); hz = Math.cos(cam.hd)
   // レースゲームの定番: 車のすぐ後ろ・低い位置から前を水平に見る（0）/ 少し引き（1）/ ボンネット（2）
   // 2026-10-26 本人「カメラの距離を近く」: 近い 3.25/1.15→2.85/1.05、引き 6.0/2.0→5.2/1.8（加えて速さによる置いていかれを無くした）
@@ -1653,7 +1806,8 @@ function updateCamera(dt) {
   if (camera.aspect < 1 && camMode !== 2) { back0 += 0.3; up0 += 0.35 }
   // 速いほど少し引く（スピード感）
   let back = back0 + (runner ? Math.min(2.4, v * 0.07) : Math.min(1.2, v * 0.026)), up = up0
-  const lookUp = runner ? 1.3 : 0
+  const lookUp = runner ? 1.3 - cam.pitch * 1.2 : 0
+  if (runner) { up += cam.pitch * 4.2; back *= 1 - Math.max(0, cam.pitch) * 0.15 }
   // カウントダウン中は前から回り込む
   if (race && race.phase === 'countdown' && c === me) {
     const k = Math.max(0, Math.min(1, (-race.t - 0.6) / (GAME.countdownSec - 0.6)))
@@ -1906,7 +2060,7 @@ addEventListener('pointerdown', () => audio.start(), { once: true })
 // 検証用の窓口（本番の操作には使わない）
 window.__btr = {
   get world() { return world }, get race() { return race }, get me() { return me }, get mode() { return mode }, profile, startOffline: beginPlayerRace,
-  get online() { return online }, get myId() { return myId }, get camMode() { return camMode }, juice,
+  get online() { return online }, get myId() { return myId }, get camMode() { return camMode }, juice, get camHd() { return cam.hd }, snapCam() { snapCamera(); cam.hd = me ? me.yaw : 0; cam.pitch = 0 },
   setPaused: p => { paused = p }, fx, camera, renderer,
   autopilot() {
     if (!me) return

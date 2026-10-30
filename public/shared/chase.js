@@ -20,6 +20,7 @@ import { createNav, areaName, headingName } from './citynav.js'
 import { createRunner, stepRunner, hitByCar, blocked, down as runnerDown, RUN } from './runner.js'
 import { runnerBot } from './runnerbot.js'
 import { createPeds, PED } from './peds.js'
+import { copRunnerBot } from './copbot.js'
 
 export const COP_NAMES = ['タツミ巡査', 'ミサキ巡査', 'ガンテツ警部', 'ヒバナ巡査', 'ROOK', 'VEGA', 'BOLT']
 export const ROBBER_NAMES = ['ナイトフォックス', 'カラス', 'ゴースト']
@@ -33,7 +34,8 @@ export function mulberry(seed) {
 }
 
 export class Chase {
-  constructor(world, { seed = 1, timeLimit = CHASE.timeLimit, backup = true } = {}) {
+  constructor(world, { seed = 1, timeLimit = CHASE.timeLimit, backup = true, footCops = false } = {}) {
+    this.footCops = footCops // 警察が走る人（WIRE ESCAPE）。false なら元の車
     this.world = world
     world.reset()
     this.mode = 'chase'
@@ -106,7 +108,8 @@ export class Chase {
       return { x: n.x + (k ? 6 : 0), z: n.z, yaw: yawOf(n), y: 0 }
     }
     const used = new Set(this.cops.map(e => e.spawnNode))
-    const cand = this.nav.list.filter(n => { const d = Math.hypot(n.x - s.x, n.z - s.z); return d >= CHASE.copSpawnMin && d <= CHASE.copSpawnMax && !used.has(n.id) })
+    const [dMin, dMax] = this.footCops ? [CHASE.footSpawnMin, CHASE.footSpawnMax] : [CHASE.copSpawnMin, CHASE.copSpawnMax]
+    const cand = this.nav.list.filter(n => { const d = Math.hypot(n.x - s.x, n.z - s.z); return d >= dMin && d <= dMax && !used.has(n.id) })
     const n = cand.length ? cand[Math.floor(this.rng() * cand.length)] : this.nav.list[(this.copSlots * 7) % this.nav.list.length]
     this.copSlots++
     // 犯人のいる方を向く
@@ -158,11 +161,12 @@ export class Chase {
       const name = role === 'cop' ? COP_NAMES[k % COP_NAMES.length] : ROBBER_NAMES[this.robbers.length % ROBBER_NAMES.length]
       // 警察の CPU はエンジンを上げてある（追いつけるように）。犯人の CPU は素の車
       const levels = role === 'cop' ? { engine: 2 + (k % 2), armor: 1 } : { engine: 1 }
-      const car = role === 'robber' && runner
+      const car = (role === 'robber' && runner) || (role === 'cop' && this.footCops)
         ? createRunner({ id, name, spawn, bot: true })
         : createCar({ id, name, carId, levels, paint: role === 'cop' ? COP_PAINT : ROBBER_PAINT, spawn, bot: true })
       car.role = role
-      if (role === 'cop') copCar(car)
+      if (role === 'cop' && !car.isRunner) copCar(car)
+      if (car.isRunner && role === 'cop') car.police = true
       const plan = { pts: densify([[spawn.x, spawn.z], [spawn.x + Math.sin(spawn.yaw) * 30, spawn.z + Math.cos(spawn.yaw) * 30]], 6), picks: [], boostZones: [] }
       const driver = createDriver(this.world, car, plan, role === 'cop' ? 0.9 + this.rng() * 0.1 : 0.8 + this.rng() * 0.12)
       driver.safe = plan
@@ -219,7 +223,7 @@ export class Chase {
     const lead = k.live ? (dNow < 45 ? 0.15 : dr.lead) : 0
     let tx = k.x + k.vx * lead, tz = k.z + k.vz * lead
     // 人が屋上や建物の上にいるときは、その下の一番近い道へ向かう（建物に突っ込まない）
-    if (rob.car.isRunner) { const q = this.roadPoint(tx, tz); tx = q.x; tz = q.z }
+    if (rob.car.isRunner && !c.isRunner) { const q = this.roadPoint(tx, tz); tx = q.x; tz = q.z }
     const d = Math.hypot(tx - c.x, tz - c.z)
     // 運河の向こう側へは、まっすぐ向かわない（橋のない通りは運河で行き止まり）
     const cn = this.world.nav.canal
@@ -372,7 +376,17 @@ export class Chase {
       // 逮捕された犯人・逃げ切った犯人は止まっている
       if (e.arrested || e.escaped) { if (c.isRunner) stepRunner(c, {}, dt, this.world); else step(c, {}, dt, this.world, null); continue }
       if (c.isRunner) {
-        const inp = e.bot ? runnerBot(this, e, dt) : (inputs[e.id] || {})
+        // はまり見張り（CPU）: 6秒で10mも進めていなければ、近くの交差点から出直す
+        if (e.bot && this.t > 4 && !c.wreck && !(c.net > 0) && !(c.pit > 0)) {
+          const w = e.watchR || (e.watchR = { x: c.x, y: c.y, z: c.z, t: this.t })
+          if (this.t - w.t > 6) {
+            if (Math.hypot(c.x - w.x, c.z - w.z, c.y - w.y) < 10) { const n = this.nav.nearest(c.x, c.z); Object.assign(c, { x: n.x, z: n.z, y: 0, vx: 0, vy: 0, vz: 0, rope: null, climbing: null }); if (e.driver) e.driver.replan = 0 }
+            e.watchR = { x: c.x, y: c.y, z: c.z, t: this.t }
+          }
+        }
+        // 警官は手配度で足が速くなる（自分より少し速い。壁登りは自分より遅い）
+        if (e.role === 'cop') { c.speedMul = CHASE.footSpeed + CHASE.footSpeedHeat * this.heat; c.climbMul = CHASE.footClimb }
+        const inp = e.bot ? (e.role === 'cop' ? copRunnerBot(this, e, dt) : runnerBot(this, e, dt)) : (inputs[e.id] || {})
         stepRunner(c, inp, dt, this.world)
         this.runnerContacts(e, cars)
         this.afterStep(e)
@@ -829,6 +843,20 @@ export class Chase {
   runnerContacts(e, cars) {
     const r = e.car
     if (r.wreck > 0 || r.freeze > 0) return
+    // 走る警官を上から踏みつける（人の犯人だけ）
+    if (e.role === 'robber' && r.vy < -RUN.stompVy) for (const o of this.cops) {
+      const oc = o.car
+      if (!oc.isRunner || o.left || oc.wreck > 0) continue
+      const dy = r.y - oc.y
+      if (dy < 0.8 || dy > 2.6 || Math.hypot(r.x - oc.x, r.z - oc.z) > 1.3) continue
+      oc.lastHitBy = r.id; oc.lastHitAt = oc.t
+      runnerDown(oc, 'stomp'); oc.wreck = CHASE.footStompSec
+      oc.vx *= 0.2; oc.vz *= 0.2
+      r.vy = RUN.stompBounce; r.grounded = false
+      r.stomps = (r.stomps || 0) + 1
+      r.events.push({ t: 'stomp', other: oc.id, cop: true, x: oc.x, y: oc.y + 1, z: oc.z })
+      return
+    }
     for (const car of cars) {
       if (car.wreck > 0 || car.knocked > 0) continue
       const dx = r.x - car.x, dz = r.z - car.z
@@ -895,11 +923,24 @@ export class Chase {
       let around = 0
       for (const o of this.cops) if (!o.left && !o.car.wreck && Math.hypot(o.car.x - c.x, o.car.z - c.z) < CHASE.bustDist + 3 && !(c.isRunner && Math.abs(c.y - (o.car.y - 0.55)) > 4)) around++
       // 警察がぴったりくっついている（5.5m 以内）なら、時速90km 未満でたまる
+      if (this.footCops) {
+        // 走る警官: 体に触れられている（2.6m・高さの差 1.8m 以内）と約0.9秒で逮捕。網・穴・ダウン中は 6m まで寄られるとたまる
+        let near = 1e9
+        for (const o of this.cops) {
+          const oc = o.car
+          if (o.left || oc.wreck > 0 || oc.stun > 0 || Math.abs(oc.y - c.y) > 1.8) continue
+          near = Math.min(near, Math.hypot(oc.x - c.x, oc.z - c.z))
+        }
+        const stuck = c.net > 0 || c.pit > 0 || c.wreck > 0
+        if (near < CHASE.footTouch || (stuck && near < CHASE.footStuck)) r.bust = Math.min(1, r.bust + dt / CHASE.footFill)
+        else r.bust = Math.max(0, r.bust - dt * CHASE.bustDrain * 2)
+      } else {
       const touching = dCop < 5.5
       const limit = touching ? CHASE.touchSpeed : around >= 2 ? CHASE.boxSpeed : CHASE.bustSpeed
       const slow = speedOf(c) < limit || c.wreck > 0
       if (dCop < CHASE.bustDist && slow) r.bust = Math.min(1, r.bust + dt / CHASE.bustFill)
       else r.bust = Math.max(0, r.bust - dt * CHASE.bustDrain)
+      }
       if (r.bust >= 1 && !this.remoteJudge) this.arrest(r, 'bust', this.nearestCopId(c))
       // 隠れ家: 人は地上近く（高さの差 12m 以内）まで降りないと入れない。見られているかは高さを問わない距離で見る
       const nearH = !c.isRunner || Math.abs(c.y - this.world.groundAt(this.hideout.x, this.hideout.z, 5).h) < 12

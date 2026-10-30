@@ -4,6 +4,9 @@
 // 2026-10-26 本人「普通に走ってる車が重すぎる」: 軽くして（質量 1.3→0.35、ゆっくり当てても飛ぶ）、
 // 台数を減らし（230m に1台→340m に1台）、遠くの車は高さの計算を省く（近くの車だけ毎回きちんと置く）。
 import { PHYS } from './config.js'
+// 一般車の速さ（元の何倍か）。WIRE ESCAPE の画面は 2026-10-30 本人「車早すぎ」で 0.55 倍（main.js が設定）。サーバー・元のテストは 1
+export let TRAFFIC_SPEED = 1
+export function setTrafficSpeed(k) { TRAFFIC_SPEED = k }
 
 export function createTraffic(world) {
   const cars = []
@@ -24,7 +27,7 @@ export function createTraffic(world) {
     for (let k = 0; k < n; k++) {
       const kind = ['sedan', 'van', 'taxi', 'sedan', 'sedan', 'van', 'sedan'][(li * 3 + k) % 7]
       cars.push({
-        id: `t${li}_${k}`, traffic: true, line: ln, phase: ln.L * (k + (li % 3) * 0.33) / n, speed: 10 + ((li * 7 + k * 3) % 6),
+        id: `t${li}_${k}`, traffic: true, line: ln, phase: ln.L * (k + (li % 3) * 0.33) / n, speed: TRAFFIC_SPEED * (10 + ((li * 7 + k * 3) % 6)),
         x: 0, y: PHYS.rideHeight, z: 0, vx: 0, vy: 0, vz: 0, yaw: 0, pitch: 0, roll: 0, grounded: true, wreck: 0, stats: { mass: 0.35 }, knocked: 0, far: false,
         kind, color: kind === 'taxi' ? 0xf2c230 : [0xe9e9e9, 0x2b2e33, 0xb8bcc2, 0x2f5f9a, 0xd8d2c0, 0x8b0f14][(li + k) % 6]
       })

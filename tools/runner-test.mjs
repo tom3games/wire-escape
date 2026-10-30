@@ -31,8 +31,7 @@ r = createRunner({ id: 'me', spawn: sp })
 run(r, 1, () => ({ throttle: 1 }))
 run(r, 0.1, () => ({ throttle: 1, wire: true }))
 const y0 = r.y
-evs = run(r, 0.05, () => ({ throttle: 1, boost: true }))
-evs = evs.concat(run(r, 2.5, (t, rr) => ({ throttle: 1 })))
+evs = run(r, 2.5, (t, rr) => ({ throttle: 1, boost: true })) // 巻き取りは押している間ずっと
 let peak = r.y
 ok('巻き取りで上へ飛ぶ', evs.some(e => e.t === 'zip') && evs.some(e => e.zip), `events=${[...new Set(evs.map(e => e.t))].join(',')}`)
 // 壁を登る: 建物の壁へ向かって走る

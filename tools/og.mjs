@@ -1,5 +1,5 @@
 // OGP 画像（1200x630）を実際のゲーム画面から作る。node tools/og.mjs
-// 大通りの上をワイヤーでスイングする人と、下を追うパトカーを止めて撮り、左に文字をのせる
+// 大通りの上をワイヤーでスイングする人と、下を走って追う警官を止めて撮り、左に文字をのせる
 import { chromium } from 'playwright'
 import { serveStatic } from './static.mjs'
 const srv = await serveStatic(5193)
@@ -31,7 +31,7 @@ await p.evaluate(() => {
   B.setPaused(true)
   // 警察を人の下・後ろの道に並べる（追っている絵）
   const fx = Math.sin(m.yaw), fz = Math.cos(m.yaw)
-  B.race.cops.forEach((e, i) => { const gy = B.world.groundAt(m.x, m.z, 1).h; Object.assign(e.car, { x: m.x - fx * (12 + i * 7) + (i % 2 ? 3 : -3) * fz, y: gy + 0.55, z: m.z - fz * (12 + i * 7) - (i % 2 ? 3 : -3) * fx, yaw: m.yaw }) })
+  B.race.cops.forEach((e, i) => { const gy = B.world.groundAt(m.x, m.z, 1).h; Object.assign(e.car, { x: m.x - fx * (9 + i * 3.5) + (i % 2 ? 2.2 : -2.2) * fz, y: gy, z: m.z - fz * (9 + i * 3.5) - (i % 2 ? 2.2 : -2.2) * fx, yaw: m.yaw, vx: fx * 10, vz: fz * 10, grounded: true, rope: null }) })
   window.__freeze = true
   // 人の前・斜め下から振り返って撮る（人は画面の右寄り、後ろの道に追ってくるパトカー）
   const sx = fz, sz = -fx // 人の右（+x が左の座標なので右は (cos,-sin)）

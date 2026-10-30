@@ -57,7 +57,7 @@ export class Input {
     inp.respawn = this.hit('respawn')
     // ワイヤーの人: ジャンプとワイヤー。押して離すまでが1コマより短くても拾う（このコマで押されたものも数える）
     inp.jump = this.any('jump') || this.hit('jump')
-    inp.wire = this.any('wire') || this.hit('wire') || this.mouse || this.mouseHit
+    inp.wire = this.any('wire') || this.hit('wire')
     inp.sneak = this.any('sneak') || this.hit('sneak')
     if (airborne) {
       // W で鼻先を下げ、S で上げる。A/D で傾ける

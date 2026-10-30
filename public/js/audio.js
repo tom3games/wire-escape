@@ -100,7 +100,31 @@ export class Audio {
   tick() { this._tone({ freq: 1200, to: 900, dur: 0.04, gain: 0.05, type: 'square' }) }
   splash() { this._burst({ freq: 1200, dur: 0.6, gain: 0.5, decay: 0.55 }) }
   // 通行人の叫び（高い声の上がり下がり）
-  scream(v = 1) { this._tone({ freq: 900, to: 1500, dur: 0.18, gain: 0.08 * v, type: 'sawtooth' }); this._tone({ freq: 1500, to: 700, dur: 0.45, gain: 0.07 * v, type: 'sawtooth', when: 0.17 }) }
+  // 情けない裏声の「きゃー！」: 高く上がって、ふるえながら落ちる（毎回少し高さを変える）
+  scream(v = 1) {
+    if (!this.ctx) return
+    const ctx = this.ctx, t = ctx.currentTime, p = 0.85 + Math.random() * 0.4
+    const o = ctx.createOscillator(); o.type = 'sawtooth'
+    o.frequency.setValueAtTime(700 * p, t)
+    o.frequency.exponentialRampToValueAtTime(1500 * p, t + 0.12)
+    o.frequency.setValueAtTime(1500 * p, t + 0.3)
+    o.frequency.exponentialRampToValueAtTime(820 * p, t + 0.95)
+    // ふるえ（ビブラート）
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 11 + Math.random() * 4
+    const lg = ctx.createGain(); lg.gain.value = 70 * p
+    lfo.connect(lg).connect(o.frequency)
+    // 「あ」「い」の間の口の形（2つの山）
+    const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 1100; f1.Q.value = 4
+    const f2 = ctx.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 2700; f2.Q.value = 5
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32 * v, t + 0.05)
+    g.gain.setValueAtTime(0.32 * v, t + 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0)
+    o.connect(f1).connect(g); o.connect(f2).connect(g); g.connect(this.sfx)
+    o.start(t); lfo.start(t); o.stop(t + 1.05); lfo.stop(t + 1.05)
+  }
+  // 情けない声の一発（「ぐえっ」「あいたた」など、下がる短い声）
+  grunt(v = 1, high = false) { this._tone({ freq: high ? 520 : 260, to: high ? 300 : 120, dur: 0.22, gain: 0.2 * v, type: 'square' }); this._burst({ freq: high ? 1800 : 900, type: 'bandpass', q: 3, dur: 0.15, gain: 0.12 * v, decay: 0.14 }) }
+  whistle(v = 1) { for (let i = 0; i < 2; i++) this._tone({ freq: 2600, to: 2500, dur: 0.16, gain: 0.07 * v, type: 'sine', when: i * 0.22 }) }
   stomp() { this._tone({ freq: 120, to: 40, dur: 0.35, gain: 0.8 }); this.crash(1.3) }
 
   // 一発音

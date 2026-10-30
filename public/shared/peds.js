@@ -129,7 +129,7 @@ export function createPeds(ch) {
         if (visible && p.cd <= 0) p.sus += dt / ((conspicuous ? PED.notice : PED.sneakNotice) * (high ? 2 : 1))
         else p.sus = Math.max(0, p.sus - dt * 0.5)
         // 勇気のある人: 地上で近いとタックルしに来る
-        if (visible && p.brave && p.cd <= 0 && r.grounded && d < PED.tackleRange && Math.abs(r.y - p.y) < 1) { p.state = 'charge'; p.t = 0 }
+        if (visible && p.brave && p.cd <= 0 && r.grounded && d < PED.tackleRange && Math.abs(r.y - p.y) < 1) { p.state = 'charge'; p.t = 0; ch.events.push({ t: 'charge', id: p.id, x: p.x, y: p.y, z: p.z }) }
         else if (p.sus >= 1) {
           p.state = 'scream'; p.t = 0
           ch.events.push({ t: 'scream', id: p.id, x: p.x, y: p.y, z: p.z })

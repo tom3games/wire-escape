@@ -54,6 +54,16 @@ await shot('peds', () => {
   B.setPaused(true)
 }, 400)
 await p.evaluate(() => window.__btr.setPaused(false))
+// コミカルな吹き出し: 叫ぶ通行人と、走ってくる警官
+await place()
+await p.evaluate(() => {
+  const B = window.__btr, m = B.me, P = B.race.peds
+  const q = P && P.list.find(q => q.state !== 'off')
+  if (q) { Object.assign(q, { x: m.x + 3.5, z: m.z + 9, y: 0, state: 'scream', t: 0, yaw: 0 }); B.race.events.push({ t: 'scream', id: q.id, x: q.x, y: 0, z: q.z }) }
+  B.race.cops.slice(0, 3).forEach((e, i) => Object.assign(e.car, { x: m.x - 3 + i * 3, z: m.z + 16 + i * 2, y: 0, yaw: Math.PI, vx: 0, vz: -8 }))
+})
+await p.waitForTimeout(700)
+await p.screenshot({ path: OUT + 'comic.png' })
 const pedInfo = await p.evaluate(() => { const P = window.__btr.race.peds; return P ? { alive: P.alive, calls: P.calls } : null })
 console.log('peds', JSON.stringify(pedInfo))
 // しゃがみ歩き

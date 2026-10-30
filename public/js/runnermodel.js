@@ -23,7 +23,8 @@ function limb(len, r0, r1, m) {
 }
 
 export class RunnerModel {
-  constructor(color = HOOD) {
+  constructor({ police = false } = {}) {
+    const color = police ? 0x1d2f5c : HOOD
     this.group = new THREE.Group()
     this.paintColor = null
     const mHood = mat(color), mPants = mat(PANTS), mSkin = mat(SKIN, { roughness: 0.6 })
@@ -59,9 +60,19 @@ export class RunnerModel {
     neck.add(head)
     const hood = new THREE.Mesh(new THREE.SphereGeometry(0.155, 12, 10, 0, Math.PI * 2, 0, Math.PI * 0.62).rotateX(-0.35).translate(0, 0.15, -0.02), mHood)
     neck.add(hood)
-    // 目元の覆面（顔を隠す）
-    const mask = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.05).translate(0, 0.16, 0.12), mat(0x111214))
-    neck.add(mask)
+    if (police) {
+      // 警官: フードの代わりに制帽、胸に反射ベスト
+      hood.visible = false
+      const cap = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.14, 0.09, 12).translate(0, 0.27, 0), mat(0x14203d))
+      const brim = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.02, 0.1).translate(0, 0.23, 0.13), mat(0x0e1528))
+      const badge = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.02).translate(0, 0.29, 0.15), mat(0xf2c230, { metalness: 0.6 }))
+      neck.add(cap, brim, badge)
+      strap.material = mat(0xd8ff3a, { emissive: 0xb8e02a, emissiveIntensity: 0.4 })
+    } else {
+      // 目元の覆面（顔を隠す）
+      const mask = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.05).translate(0, 0.16, 0.12), mat(0x111214))
+      neck.add(mask)
+    }
 
     // 腕
     const arm = (s) => {

@@ -6,7 +6,8 @@
 //   steer     向きを変える（+ で右）
 //   jump      跳ぶ（地面にいるとき。壁に向かって走ると駆け上がる）
 //   wire      ワイヤー。押すたびに 掛ける / 外す（掛ける所は前の上の建物。地面にいれば跳んでから掛ける）
-//   boost     巻き取り。ワイヤー中に押すと掛けた点へ一気に引き寄せられ、着く前に外れて前へ飛び出す（1.2秒に1回）
+//   boost     巻き取り。ワイヤー中に押している間、掛けた点へ引き寄せられ、着く前に外れて前へ飛び出す
+//   wireAt    狙った点 {x,y,z}（画面をタッチ・クリックした所の建物）。無ければ前の上を自動で探す
 // ガスやゲージは無い。ワイヤー1本で動く
 //
 // 座標は車と同じ（x=東西, z=南北, yaw=0 で +z を向く）。y は足の高さ。
@@ -32,8 +33,9 @@ export const RUN = {
   reel: 0.8,                    // スイングの下で自動で巻き取る速さ（m/s）
   minRope: 6,
   swingLow: 6,                  // 振り子の一番下の、地面からの高さ
-  zip: 34,                      // 巻き取りの速さ（m/s）
-  zipCd: 1.2,                   // 巻き取りの待ち時間
+  zip: 32,                      // 巻き取りの最高速（m/s）
+  zipAcc: 48,                   // 巻き取りの加速
+  zipCd: 1,                     // （使っていない。表示の割り算用）
   zipExit: 9,                   // 巻き取りの終わりに前と上へ飛び出す速さ
   maxSpeed: 38,
   releaseVyMax: 9,              // 外した瞬間の上向きの速さの上限（振るたびに空へ昇り続けないように）
@@ -122,6 +124,16 @@ function rayBox(o, ox, oy, oz, dx, dy, dz, len) {
 function anchorBoxes(world) {
   if (!world._anchorBoxes) world._anchorBoxes = world.colliders.filter(o => !o.slab && o.y1 != null && o.y1 - o.y0 > 6 && (o.kind === 'building' || o.kind === 'bound'))
   return world._anchorBoxes
+}
+
+// 画面をタッチ・クリックした向きの線が最初に当たる建物の点（ワイヤーの狙い）。当たらなければ null
+export function rayHit(world, ox, oy, oz, dx, dy, dz, len = 400) {
+  let best = -1
+  for (const o of anchorBoxes(world)) {
+    const t = rayBox(o, ox, oy, oz, dx, dy, dz, len)
+    if (t > 0 && (best < 0 || t < best)) best = t
+  }
+  return best < 0 ? null : { x: ox + dx * best, y: oy + dy * best, z: oz + dz * best }
 }
 
 // 2点の間に建物があるか（3D）。拳銃とヘリの見通しに使う
@@ -264,13 +276,12 @@ export function stepRunner(r, inp, dt, world) {
   const jumpPress = jumpHeld && !r.jumpPrev, wirePress = wireHeld && !r.wirePrev
   r.jumpPrev = jumpHeld; r.wirePrev = wireHeld
   if (r.stun > 0) { r.stun -= dt; thr = brk = steer = 0 }
+  // 巻き取り: 押している間（スマホはスティックをワイヤーの方へ倒している間）ずっと
   const zipHeld = !!inp.boost, zipPress = zipHeld && !r.zipPrev
   r.zipPrev = zipHeld
-  r.zipCd = Math.max(0, (r.zipCd || 0) - dt)
-  if (zipPress && r.rope && !r.zipping && r.zipCd <= 0 && r.stun <= 0) {
-    r.zipping = true; r.zipCd = RUN.zipCd
-    ev.push({ t: 'zip' })
-  } else if (zipPress && !r.rope && r.stun <= 0) ev.push({ t: 'zipNo' })
+  r.zipCd = 0
+  if (zipHeld && r.rope && r.stun <= 0) { if (!r.zipping) ev.push({ t: 'zip' }); r.zipping = true }
+  else { r.zipping = false; if (zipPress && !r.rope && r.stun <= 0) ev.push({ t: 'zipNo' }) }
 
   // 向き
   const turn = (r.grounded ? RUN.turn : r.rope ? RUN.airTurn * 1.2 : RUN.airTurn) * steer
@@ -284,7 +295,14 @@ export function stepRunner(r, inp, dt, world) {
       r.sneaking = false
       const fromGround = r.grounded
       if (r.grounded) { r.vy = Math.max(r.vy, RUN.jump * 0.85); r.grounded = false; r.y += 0.05; ev.push({ t: 'jump' }) }
-      const a = findAnchor(world, r)
+      // 狙った点（画面をタッチ・クリックした所）があればそこへ。届かなければ自動で探す
+      let a = null
+      const w = inp.wireAt
+      if (w) {
+        const d = Math.hypot(w.x - r.x, w.y - (r.y + 1.5), w.z - r.z)
+        if (d <= RUN.wireRange * 1.1 && w.y > r.y + 2) a = { x: w.x, y: w.y, z: w.z, len: d }
+      }
+      if (!a) a = findAnchor(world, r)
       if (a) {
         const d = Math.hypot(a.x - r.x, a.y - (r.y + 1.2), a.z - r.z)
         // 長さは「振り子の一番下が、足元の地面から swingLow 上に来る」長さ。今の距離より長ければ、張るまで落ちてから振れる
@@ -319,7 +337,7 @@ export function stepRunner(r, inp, dt, world) {
     const cl = r.climbing
     if (thr <= 0 || r.stun > 0) { r.climbing = null; r.vy = Math.min(r.vy, 2); r.vx += cl.nx * 3; r.vz += cl.nz * 3 }
     else {
-      r.vy = RUN.climb
+      r.vy = RUN.climb * (r.climbMul || 1)
       r.vx = -cl.nx * 2; r.vz = -cl.nz * 2 // 壁に押しつけたまま
       if (r.y >= cl.top - 0.2) {
         // 屋上へ乗り上げる
@@ -331,7 +349,7 @@ export function stepRunner(r, inp, dt, world) {
       }
     }
   } else if (r.grounded) {
-    const want = thr > 0 ? (r.sneaking ? RUN.sneak : RUN.walk) * thr : brk > 0 ? -RUN.back * (r.sneaking ? 0.5 : 1) : 0
+    const want = (thr > 0 ? (r.sneaking ? RUN.sneak : RUN.walk) * thr : brk > 0 ? -RUN.back * (r.sneaking ? 0.5 : 1) : 0) * (r.speedMul || 1)
     const vf = r.vx * fx + r.vz * fz
     const vl = r.vx * fz - r.vz * fx // 横（右が + ではない。消すだけなので向きは問わない）
     const nf = vf + clamp(want - vf, -RUN.accel * dt * (brk > 0 && vf > 0 ? 1.6 : 1), RUN.accel * dt)
@@ -354,12 +372,15 @@ export function stepRunner(r, inp, dt, world) {
     }
   }
   if (r.rope && r.zipping) {
-    // 巻き取り: 掛けた点へまっすぐ飛ぶ。着く手前（8m）で外れて、前と上へ飛び出す
+    // 巻き取り: 掛けた点へ加速して飛ぶ（最高 zip m/s）。着く手前（7m）で外れて、前と上へ飛び出す
     const dx = r.rope.x - r.x, dy = r.rope.y - (r.y + 1.2), dz = r.rope.z - r.z, d = Math.hypot(dx, dy, dz) || 1
-    r.vx = dx / d * RUN.zip; r.vy = dy / d * RUN.zip; r.vz = dz / d * RUN.zip
+    const ux = dx / d, uy = dy / d, uz = dz / d
+    r.vx += ux * RUN.zipAcc * dt; r.vy += uy * RUN.zipAcc * dt + RUN.gravity * dt; r.vz += uz * RUN.zipAcc * dt
+    const along = r.vx * ux + r.vy * uy + r.vz * uz
+    if (along > RUN.zip) { const k = along - RUN.zip; r.vx -= ux * k; r.vy -= uy * k; r.vz -= uz * k }
     r.rope.len = Math.min(r.rope.len, d)
     r.boosting = true
-    if (d < 8) {
+    if (d < 7) {
       r.zipping = false
       const h = Math.hypot(dx, dz) || 1
       r.rope = null
@@ -516,7 +537,7 @@ export function hitByCar(r, car, rel, dmgScale = 1) {
   const dx = r.x - car.x, dz = r.z - car.z, d = Math.hypot(dx, dz) || 1
   r.rope = null; r.climbing = null
   r.vx = car.vx * 0.85 + dx / d * 6; r.vz = car.vz * 0.85 + dz / d * 6
-  r.vy = 5 + Math.min(6, rel * 0.15)
+  r.vy = 7.5 + Math.min(6, rel * 0.25) // 大げさに高く飛ばす（見て笑える）
   r.grounded = false; r.y += 0.1
   r.stun = 0.9
   const a = (0.08 + rel * 0.0065) * dmgScale

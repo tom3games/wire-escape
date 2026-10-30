@@ -29,6 +29,35 @@ export class Touch {
     // 左右のボタン（押している間だけ切る。切れ方は input.js でなめらかにする）
     hold(q('[data-k=left]'), 'left', true)
     hold(q('[data-k=right]'), 'right', true)
+    // 左手のスティック（触った所に出る。倒した向きと量）
+    this.stick = { x: 0, y: 0, mag: 0, id: null }
+    const zone = q('#stickZone') || document.getElementById('stickZone'), base = document.getElementById('stickBase'), knob = document.getElementById('stickKnob')
+    if (zone && base && knob) {
+      const R = 56
+      let cx = 0, cy = 0
+      const rest = () => { base.style.left = ''; base.style.top = ''; base.classList.remove('held'); knob.style.transform = 'translate(-50%,-50%)' }
+      const move = e => {
+        let dx = e.clientX - cx, dy = e.clientY - cy
+        const l = Math.hypot(dx, dy)
+        if (l > R) { dx *= R / l; dy *= R / l }
+        this.stick.x = dx / R; this.stick.y = -dy / R; this.stick.mag = Math.min(1, l / R)
+        knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`
+      }
+      zone.addEventListener('pointerdown', e => {
+        e.preventDefault()
+        if (this.stick.id != null) return
+        this.stick.id = e.pointerId
+        try { zone.setPointerCapture(e.pointerId) } catch {}
+        const zr = zone.getBoundingClientRect()
+        cx = e.clientX; cy = e.clientY
+        base.style.left = (cx - zr.left) + 'px'; base.style.top = (cy - zr.top) + 'px'
+        base.classList.add('held')
+        move(e)
+      })
+      zone.addEventListener('pointermove', e => { if (e.pointerId === this.stick.id) move(e) })
+      const up = e => { if (e.pointerId !== this.stick.id) return; this.stick.id = null; this.stick.x = this.stick.y = this.stick.mag = 0; rest() }
+      zone.addEventListener('pointerup', up); zone.addEventListener('pointercancel', up); zone.addEventListener('lostpointercapture', up)
+    }
     // 長押しメニュー・選択・拡大を出さない
     root.addEventListener('contextmenu', e => e.preventDefault())
   }
@@ -50,7 +79,8 @@ export class Touch {
     const was = this.active
     this.active = on
     this.root.classList.toggle('hidden', !on)
-    if (!on) for (const k of Object.keys(this.state)) if (k !== 'throttle') this.state[k] = typeof this.state[k] === 'boolean' ? false : 0
-    if (on && !was) this.setGas(this.gasOn ?? true) // レースに出たらアクセルは入った状態から
+    if (!on) { for (const k of Object.keys(this.state)) this.state[k] = typeof this.state[k] === 'boolean' ? false : 0; this.stick.x = this.stick.y = this.stick.mag = 0; this.stick.id = null }
+    // 走るのはスティック（走るスイッチは使わない）
+    void was
   }
 }

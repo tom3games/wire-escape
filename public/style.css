@@ -584,3 +584,26 @@ body.touch .reward { top: 30%; }
 #hud .eye.sneak i { background: #9fd7ff; }
 #touch [data-k=sneak].lit { background: rgba(80,160,255,0.75); border-color: #fff; }
 @media (max-height: 430px) { #hud .eye { top: 70px; } }
+
+/* 左手のスティック（触った所に出る） */
+.t-stickzone { position: absolute; left: 0; bottom: 0; width: 46%; height: 62%; pointer-events: auto; touch-action: none; }
+.t-stick { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(16px, env(safe-area-inset-bottom)) - 62px); width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35); background: rgba(20,22,26,0.32); opacity: 0.6; transition: opacity .15s; }
+.t-stick.held { opacity: 1; }
+.t-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,0.85); box-shadow: 0 2px 8px rgba(0,0,0,0.4); transform: translate(-50%,-50%); }
+/* 右手: ジャンプとワイヤー（自動で狙う）だけ */
+.t-pedals { grid-template-columns: 88px 112px; grid-template-rows: 112px; grid-template-areas: "jump wire"; }
+@media (max-height: 430px) { .t-pedals { grid-template-columns: 74px 94px; grid-template-rows: 94px; } .t-stick { width: 108px; height: 108px; margin: -54px 0 0 -54px; } }
+@media (max-width: 440px) and (orientation: portrait) { .t-pedals { grid-template-columns: 76px 96px; grid-template-rows: 96px; } }
+
+/* しゃがみ歩きは右手（ジャンプの上） */
+.t-pedals { grid-template-rows: 48px 112px; grid-template-areas: "sneak ." "jump wire"; }
+.t-pedals .t-sneak { grid-area: sneak; border-radius: 12px; padding: 8px; }
+.t-pedals .t-sneak svg { width: 100%; height: 100%; }
+@media (max-height: 430px) { .t-pedals { grid-template-rows: 40px 94px; } }
+@media (max-width: 440px) and (orientation: portrait) { .t-pedals { grid-template-rows: 44px 96px; } }
+
+/* 縦持ち: 無線の表示を右上の地図の手前で止める */
+@media (orientation: portrait) { body.touch #hud .radio { top: 300px; left: 50%; max-width: calc(100% - 32px); font-size: 13px; } }
+
+/* 説明の一文は画面の幅で折り返す（縦持ちではみ出さない） */
+#hud .hint { white-space: normal; max-width: min(92vw, 640px); width: max-content; text-align: center; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
