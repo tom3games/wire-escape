@@ -1,27 +1,27 @@
 // 画面の入口。タイトル（裏でCPUの追跡のデモ）→ ガレージ → 警察と犯人 → 結果。
 // 物理と追跡の判定は shared/ のものをそのまま使い、ここは描画・入力・音・画面遷移だけを持つ。
 import * as THREE from 'three'
-import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=6'
-import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=6'
-import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=6'
-import { createNav } from '../shared/citynav.js?v=6'
-import { speedOf } from '../shared/physics.js?v=6'
-import { createDriver, drive, planRoute } from '../shared/ai.js?v=6'
-import { buildScene, propGeometry } from './scene.js?v=6'
-import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=6'
-import { FX } from './fx.js?v=6'
-import { Audio } from './audio.js?v=6'
-import { Input } from './input.js?v=6'
-import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=6'
-import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=6'
-import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=6'
-import { loadSky, makeComposer, setAniso } from './look.js?v=6'
-import { Q, LOW } from './quality.js?v=6'
-import { Online } from './online.js?v=6'
-import { Touch } from './touch.js?v=6'
-import { RunnerModel } from './runnermodel.js?v=6'
-import { findAnchor, rayHit, RUN } from '../shared/runner.js?v=6'
-import { setTrafficSpeed } from '../shared/traffic.js?v=6'
+import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=7'
+import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=7'
+import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=7'
+import { createNav } from '../shared/citynav.js?v=7'
+import { speedOf } from '../shared/physics.js?v=7'
+import { createDriver, drive, planRoute } from '../shared/ai.js?v=7'
+import { buildScene, propGeometry } from './scene.js?v=7'
+import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=7'
+import { FX } from './fx.js?v=7'
+import { Audio } from './audio.js?v=7'
+import { Input } from './input.js?v=7'
+import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=7'
+import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=7'
+import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=7'
+import { loadSky, makeComposer, setAniso } from './look.js?v=7'
+import { Q, LOW } from './quality.js?v=7'
+import { Online } from './online.js?v=7'
+import { Touch } from './touch.js?v=7'
+import { RunnerModel } from './runnermodel.js?v=7'
+import { findAnchor, rayHit, RUN } from '../shared/runner.js?v=7'
+import { setTrafficSpeed } from '../shared/traffic.js?v=7'
 setTrafficSpeed(0.55) // 一般車は遅め（本人「車早すぎ」）
 
 // ---------------------------------------------------------------- ロード画面（index.html の #loader）の進み具合
@@ -734,8 +734,8 @@ document.addEventListener('pointermove', e => {
   if (!g.moved && Math.hypot(e.clientX - g.x, e.clientY - g.y) > 12) g.moved = true
   if (!g.moved) return
   // 右へなぞると右を向く。上下はカメラの高さ（下へなぞると上から見下ろす）
-  cam.hd -= dx * 0.006
-  cam.pitch = Math.max(-0.35, Math.min(1, cam.pitch + dy * 0.004))
+  cam.hd -= dx * 0.0072   // 見回す感度 0.006/0.004 の1.2倍（2026-11-03 本人「ほんとにちょっとだけ高く」）
+  cam.pitch = Math.max(-0.35, Math.min(1, cam.pitch + dy * 0.0048))
   cam.userT = performance.now()
 }, { capture: true })
 const endGesture = e => {

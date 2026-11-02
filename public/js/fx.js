@@ -1,7 +1,7 @@
 // 演出: 破片・火花・煙・土ぼこり・吹き飛ぶ物体。どれも各画面だけで作る（通信しない）。
 // 数に上限を持たせ、古いものから使い回す。
 import * as THREE from 'three'
-import { softDot } from './geo.js?v=6'
+import { softDot } from './geo.js?v=7'
 
 const MAX_DEBRIS = 420
 const MAX_PARTS = 900

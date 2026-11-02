@@ -1,8 +1,8 @@
 // 追跡中の表示（役・残り時間・手配度・逮捕ゲージ・無線・損傷・速度・ブースト・小地図）
-import { GAME, CARS, CHASE } from '../shared/config.js?v=6'
-import { speedOf } from '../shared/physics.js?v=6'
-import { RUN } from '../shared/runner.js?v=6'
-import { t } from './i18n.js?v=6'
+import { GAME, CARS, CHASE } from '../shared/config.js?v=7'
+import { speedOf } from '../shared/physics.js?v=7'
+import { RUN } from '../shared/runner.js?v=7'
+import { t } from './i18n.js?v=7'
 
 const $ = id => document.getElementById(id)
 const COLORS = ['#ff5a1f', '#3b8cff', '#f2c230', '#36c37a', '#f07acb', '#eeeeee', '#9b6bff', '#ff8a1f']

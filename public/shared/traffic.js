@@ -3,7 +3,7 @@
 // レースの車に当てられると軽く吹き飛び、数秒後に元の流れへ戻る（吹き飛び方は各画面だけの演出）。
 // 2026-10-26 本人「普通に走ってる車が重すぎる」: 軽くして（質量 1.3→0.35、ゆっくり当てても飛ぶ）、
 // 台数を減らし（230m に1台→340m に1台）、遠くの車は高さの計算を省く（近くの車だけ毎回きちんと置く）。
-import { PHYS } from './config.js?v=6'
+import { PHYS } from './config.js?v=7'
 // 一般車の速さ（元の何倍か）。WIRE ESCAPE の画面は 2026-10-30 本人「車早すぎ」で 0.55 倍（main.js が設定）。サーバー・元のテストは 1
 export let TRAFFIC_SPEED = 1
 export function setTrafficSpeed(k) { TRAFFIC_SPEED = k }

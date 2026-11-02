@@ -1,7 +1,7 @@
 // CPU の運転手。走行線を先読みで追い、曲がり角の手前で減速し、ジャンプの前はブーストを溜めて使う。
 // オフラインの対戦相手と、コースが走り切れるかの自動検証の両方に使う。
 
-import { speedOf } from './physics.js?v=6'
+import { speedOf } from './physics.js?v=7'
 
 const clamp = (v, a, b) => v < a ? a : v > b ? b : v
 
