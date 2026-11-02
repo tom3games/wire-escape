@@ -27,7 +27,7 @@ await p.goto(url + (url.includes('?') ? '&' : '?') + 't=' + t0, { waitUntil: 'co
 const since = () => (Date.now() - t0) / 1000
 const wLoader = p.waitForFunction(() => { const l = document.getElementById('loader'); return l && getComputedStyle(l).display !== 'none' }, null, { timeout: 60000, polling: 50 }).then(since).catch(() => null)
 const tReady = await p.waitForFunction(() => window.__btrReady, null, { timeout: 180000, polling: 50 }).then(since)
-const hasLoaded = await p.evaluate(() => '__btrLoaded' in window)
+const hasLoaded = await p.evaluate(() => !!window.__ld)
 const tLoaded = hasLoaded ? await p.waitForFunction(() => window.__btrLoaded, null, { timeout: 180000, polling: 50 }).then(since) : null
 const firstLoader = await wLoader
 // 通信が 1.5 秒止まるまで待つ

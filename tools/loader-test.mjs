@@ -12,6 +12,12 @@ const eng = useWk ? webkit : chromium
 const b = await eng.launch(useWk ? {} : { args: [...MUTE_LAUNCH.args, '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
 let bad = 0
 const ok = (c, name, info = '') => { if (!c) bad++; console.log(c ? 'OK ' : 'NG ', name, info) }
+// 先読み（modulepreload）は importmap より後。前だと Chrome が "three" を解決できず起動しない（2026-11-03 公開版で踏んだ。ローカルでは間に合って通ってしまう）
+{
+  const html = (await import('node:fs')).readFileSync(new URL('../public/index.html', import.meta.url), 'utf8')
+  const im = html.indexOf('type="importmap"'), mp = html.indexOf('rel="modulepreload"')
+  ok(im > 0 && (mp < 0 || mp > im), 'modulepreload が importmap の後', `importmap@${im} modulepreload@${mp}`)
+}
 
 async function open(size, { slow = false, block = null } = {}) {
   const ctx = await b.newContext({ viewport: { width: size[0], height: size[1] }, locale: 'ja-JP', hasTouch: size[0] < 900 })

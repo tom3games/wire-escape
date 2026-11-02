@@ -17,11 +17,8 @@
 <link rel="icon" href="icon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Dela+Gothic+One&family=M+PLUS+1p:wght@500;700;800&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
-<link rel="stylesheet" href="style.css?v=6">
-<link rel="modulepreload" href="vendor/three.module.js">
-<link rel="modulepreload" href="vendor/three.core.js">
-<link rel="modulepreload" href="js/main.js?v=6">
+<!-- style.css はロード画面の裏で読む（描画を止めない）。ロード画面は下の <style> だけで出る。フォントはスクリプトが揃ってから頼む -->
+<link rel="stylesheet" href="style.css?v=6" media="print" onload="this.media='all';window.__cssOk=1">
 <style>
   /* ロード画面: 警察無線の周波数を合わせている間に街を読み込む。style.css を待たずに出すのでここに書く */
   #loader { position: fixed; inset: 0; z-index: 100; isolation: isolate; background: #0d0f12; color: #f3f1ea; overflow: hidden;
@@ -75,6 +72,7 @@
     L.upd = function () {
       var p = 0.4 * Math.min(1, L.js / L.jsTotal) + (L.itemsTotal ? 0.55 * L.items / L.itemsTotal : 0) + (window.__btrReady ? 0.05 : 0)
       if (window.__btrLoaded) p = 1
+      if (L.js >= L.jsTotal) askFonts()
       if (p > L.pct + 0.001) { L.pct = p; L.lastMove = Date.now(); L.hist.push(Math.round(p * 100)) }
       if (!el('ldPct')) return
       var q = Math.min(100, Math.round(L.pct * 100))
@@ -82,7 +80,19 @@
       el('ldFreq').textContent = (148 + L.pct * 7.75).toFixed(2)
       el('ldNeedle').style.left = q + '%'
     }
+    // フォント（約140KB）は起動スクリプトと回線を取り合うので、スクリプトが揃ってから頼む。ロード画面が消える頃には届いている
+    var fontsAsked = false
+    function askFonts() {
+      if (fontsAsked) return; fontsAsked = true
+      var f = document.createElement('link'); f.rel = 'stylesheet'
+      f.href = 'https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Dela+Gothic+One&family=M+PLUS+1p:wght@500;700;800&display=swap'
+      document.head.appendChild(f)
+    }
     L.finish = function () {
+      // style.css がまだなら届くまで待つ（10秒で諦めて出す）
+      if (!window.__cssOk && !L.cssWait) { L.cssWait = Date.now() }
+      if (!window.__cssOk && Date.now() - L.cssWait < 10000) { setTimeout(L.finish, 100); return }
+      askFonts()
       L.upd()
       var d = el('loader'); if (!d) return
       d.classList.add('out'); setTimeout(function () { d.hidden = true }, 500)
@@ -125,6 +135,10 @@
 <script type="importmap">
 { "imports": { "three": "./vendor/three.module.js" } }
 </script>
+<!-- 先読みは importmap の後に置く（前に置くと Chrome が "three" を解決できず起動しない。2026-11-03 公開版で踏んだ） -->
+<link rel="modulepreload" href="vendor/three.module.js">
+<link rel="modulepreload" href="vendor/three.core.js">
+<link rel="modulepreload" href="js/main.js?v=6">
 </head>
 <body>
 <!-- ロード画面（読み込みが全部終わるまで。main.js が消す） -->
