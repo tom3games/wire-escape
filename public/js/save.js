@@ -1,5 +1,5 @@
 // プレイヤーの保存データ（所持金・車ごとの改造・塗装）。このブラウザの localStorage にだけ置く
-import { CARS, UPGRADES, clampLevel } from '../shared/config.js?v=7'
+import { CARS, UPGRADES, clampLevel } from '../shared/config.js?v=8'
 
 const KEY = 'we-profile-v1'
 

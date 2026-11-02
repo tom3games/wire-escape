@@ -12,15 +12,15 @@
 // 手配度4からは、犯人の行く手の道にスパイクベルトを敷く（踏むとパンクして遅く・滑りやすくなる。修理工場で直る）。
 // 修理工場（街に4か所）: 中で3秒止まると全回復。犯人は警察に見られていると直せず、直すと手配度が1下がり警察は見失う
 
-import { GAME, CHASE, REWARD } from './config.js?v=7'
-import { createCar, step, respawn, speedOf } from './physics.js?v=7'
-import { createDriver, drive, densify } from './ai.js?v=7'
-import { createTraffic } from './traffic.js?v=7'
-import { createNav, areaName, headingName } from './citynav.js?v=7'
-import { createRunner, stepRunner, hitByCar, blocked, down as runnerDown, RUN } from './runner.js?v=7'
-import { runnerBot } from './runnerbot.js?v=7'
-import { createPeds, PED } from './peds.js?v=7'
-import { copRunnerBot } from './copbot.js?v=7'
+import { GAME, CHASE, REWARD } from './config.js?v=8'
+import { createCar, step, respawn, speedOf } from './physics.js?v=8'
+import { createDriver, drive, densify } from './ai.js?v=8'
+import { createTraffic } from './traffic.js?v=8'
+import { createNav, areaName, headingName } from './citynav.js?v=8'
+import { createRunner, stepRunner, hitByCar, blocked, down as runnerDown, RUN } from './runner.js?v=8'
+import { runnerBot } from './runnerbot.js?v=8'
+import { createPeds, PED } from './peds.js?v=8'
+import { copRunnerBot } from './copbot.js?v=8'
 
 export const COP_NAMES = ['タツミ巡査', 'ミサキ巡査', 'ガンテツ警部', 'ヒバナ巡査', 'ROOK', 'VEGA', 'BOLT']
 export const ROBBER_NAMES = ['ナイトフォックス', 'カラス', 'ゴースト']

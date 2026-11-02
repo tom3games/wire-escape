@@ -2,8 +2,8 @@
 // three.js に依存しないので、ブラウザ（自車）とサーバー/オフライン（CPU車・検証）で同じものが動く。
 // 固定ステップ（GAME.step）で呼ぶこと。
 
-import { GAME, PHYS, DAMAGE, buildStats } from './config.js?v=7'
-import { surfaceDef } from './track.js?v=7'
+import { GAME, PHYS, DAMAGE, buildStats } from './config.js?v=8'
+import { surfaceDef } from './track.js?v=8'
 
 const WX = 0.85, WZ = 1.35       // 車輪の位置（左右・前後の半分）
 const WHEELS = [[WX, WZ], [-WX, WZ], [WX, -WZ], [-WX, -WZ]] // 左前 右前 左後 右後（+x が左）

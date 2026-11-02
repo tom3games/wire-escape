@@ -1,7 +1,7 @@
 // ドリフトの効き: 平らな地面で 30m/s（108km/h）から90度曲がる距離・最大の横滑り角・抜けてから直進に戻るまでの時間
 // node tools/drift-test.mjs
-import { createCar, step } from '../public/shared/physics.js?v=6'
-import { GAME } from '../public/shared/config.js?v=6'
+import { createCar, step } from '../public/shared/physics.js?v=8'
+import { GAME } from '../public/shared/config.js?v=8'
 const flat = { groundAt: () => ({ h: 0, surf: null }), nearby: () => [], destroyed: new Set(), slabActive: () => true, breakObj() {}, pitRegen: false, inRepair: () => false, fallY: -100 }
 const dt = GAME.step
 function run(name, inp) {

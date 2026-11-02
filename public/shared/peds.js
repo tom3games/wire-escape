@@ -6,7 +6,7 @@
 //       たまり切ると叫んで逃げ、少しあとに通報する（警察に位置が伝わる。3回で手配度が1上がる）
 // タックル: 勇気のある人（約15%）は、地上で近くにいる人に向かって走ってきて、当たるとよろけさせる。跳べばかわせる
 
-import { blocked } from './runner.js?v=7'
+import { blocked } from './runner.js?v=8'
 
 export const PED = {
   count: 50,

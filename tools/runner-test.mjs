@@ -1,7 +1,7 @@
 // 人の動きを描画なしで試す: 走る / 壁を登る / ワイヤーでスイング / 巻き取り / 運河
-import { createWorld } from '../public/shared/track.js?v=6'
-import { createRunner, stepRunner, findAnchor, RUN } from '../public/shared/runner.js?v=6'
-import { createNav } from '../public/shared/citynav.js?v=6'
+import { createWorld } from '../public/shared/track.js?v=8'
+import { createRunner, stepRunner, findAnchor, aimTap, RUN } from '../public/shared/runner.js?v=8'
+import { createNav } from '../public/shared/citynav.js?v=8'
 const world = createWorld('city'), nav = createNav(world)
 const dt = 1 / 60
 let fails = 0
@@ -76,5 +76,43 @@ const cz = world.nav.canal.z0 - 30
 r = createRunner({ id: 'me', spawn: { x: nav.list.find(n => n.i === 1 && n.j === 3).x + 40, z: cz, yaw: 0, y: 0 } })
 evs = run(r, 8, () => ({ throttle: 1, jump: true }))
 ok('運河に落ちたら手前に戻る', evs.some(e => e.t === 'splash') && r.y > -0.5, `y=${r.y.toFixed(2)} z=${r.z.toFixed(0)} 運河${world.nav.canal.z0.toFixed(0)}`)
+// 地面ワイヤー（2026-11-03 本人「空中に浮いてる間は地面にもワイヤーつけて加速」）
+const gp = (rr, ahead = 25) => ({ x: rr.x, y: world.groundAt(rr.x, rr.z + ahead, 0).h, z: rr.z + ahead, ground: true })
+r = createRunner({ id: 'me', spawn: sp })
+run(r, 1, () => ({ throttle: 1 }))
+evs = run(r, 0.1, (t, rr) => ({ throttle: 1, wire: t === 0, wireAt: gp(rr) }))
+ok('地面ワイヤー: 地面にいる時は掛からない（跳びもしない）', !r.rope && evs.some(e => e.t === 'wireMiss' && e.ground) && !evs.some(e => e.t === 'jump'), JSON.stringify(evs.map(e => e.t)))
+const airborne = (y = 18, vz = 10) => { const rr = createRunner({ id: 'me', spawn: sp }); Object.assign(rr, { y, vz, grounded: false }); return rr }
+r = airborne()
+const pt = gp(r, 30)
+let maxStep = 0, maxSp = 0, relD = null, steps = 0, v0 = Math.hypot(r.vx, r.vy, r.vz), vPeak = 0
+evs = []
+for (let i = 0; i < 4 * 60; i++) {
+  const x0 = r.x, y0 = r.y, z0 = r.z
+  stepRunner(r, { wire: i === 0, wireAt: i === 0 ? pt : null }, dt, world)
+  if (i === 0) ok('地面ワイヤー: 空中なら掛かる', !!(r.rope && r.rope.ground), JSON.stringify(r.events.map(e => e.t)))
+  maxStep = Math.max(maxStep, Math.hypot(r.x - x0, r.y - y0, r.z - z0)); maxSp = Math.max(maxSp, Math.hypot(r.vx, r.vy, r.vz))
+  if (r.rope) vPeak = Math.max(vPeak, Math.hypot(r.vx, r.vy, r.vz))
+  for (const e of r.events) { evs.push(e); if (e.t === 'unwire' && e.ground && relD == null) relD = Math.hypot(pt.x - r.x, pt.y - (r.y + 1.2), pt.z - r.z) }
+  r.events.length = 0; steps++
+  if (relD != null) break
+}
+ok('地面ワイヤー: 点へ加速し、近く（点か地面の直前）で外れて上へ跳ねる', vPeak > v0 + 5 && relD != null && relD < 12 && r.vy >= RUN.groundWireHop - 0.01, `v ${v0.toFixed(1)}→${vPeak.toFixed(1)}m/s 外れた距離${relD && relD.toFixed(1)}m vy=${r.vy.toFixed(1)}`)
+ok('地面ワイヤー: 1ステップで動く距離は最高速×dt 以下（瞬間移動しない）', maxStep <= RUN.maxSpeed * dt + 1e-6, `${maxStep.toFixed(3)}m / ${(RUN.maxSpeed * dt).toFixed(3)}m`)
+r = airborne()
+evs = run(r, 1.5, (t, rr) => ({ wire: Math.floor(t * 6) % 2 === 0 }))
+ok('地面ワイヤー: ワイヤーボタン（狙いなし）では空中でも地面に掛からない', !evs.some(e => e.ground), `wire=${evs.filter(e => e.t === 'wire').length}`)
+r = airborne(); r.role = 'cop'
+evs = run(r, 0.1, (t, rr) => ({ wire: t === 0, wireAt: gp(rr) }))
+ok('地面ワイヤー: 警官は使わない', !r.rope && evs.some(e => e.t === 'wireMiss'), '')
+// 画面のタップ: 空中で真下（道）を押すと地面、地面にいる時は地面にならない、建物の壁を押すと建物
+{
+  const o = { x: sp.x, y: 20, z: sp.z }, dn = [0, -0.6, 0.8]
+  const ga = aimTap(world, o.x, o.y, o.z, ...dn, true), gg = aimTap(world, o.x, o.y, o.z, ...dn, false)
+  const wb = world.colliders.find(c => c.kind === 'building' && c.y1 > 25 && Math.abs(c.cx - sp.x) < 200 && c.cz > sp.z + 40)
+  const tx = wb.cx - o.x, tz = wb.cz - wb.hl - o.z, ty = 12 - o.y, L = Math.hypot(tx, ty, tz)
+  const wa = aimTap(world, o.x, o.y, o.z, tx / L, ty / L, tz / L, true)
+  ok('タップ: 空中の道は地面ワイヤー・地面にいれば地面にしない・壁は建物', ga && ga.ground && !(gg && gg.ground) && wa && !wa.ground, JSON.stringify({ ga, gg, wa }).slice(0, 200))
+}
 console.log(fails ? `NG ${fails}件` : '全部OK')
 process.exit(fails ? 1 : 0)

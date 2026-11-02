@@ -3,7 +3,7 @@
 //   上の段 = 上の階（幅 6m x 高さ 7.2m = 2部屋 x 2階）、中の段 = 1階の店先（6m x 4.5m）、下の段 = 看板（縦看板2つ + 横長の屋上広告）
 // 型: 0 事務所（コンクリート板）/ 1 タイル張りのマンション / 2 ガラスのビル / 3 レンガ
 import * as THREE from 'three'
-import { Q } from './quality.js?v=7'
+import { Q } from './quality.js?v=8'
 
 const UP_W = 6, UP_H = 7.2, GF_H = 4.5
 const WALLS = {

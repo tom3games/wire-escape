@@ -1,5 +1,5 @@
 // 道の中心線の上に、建物・壁などの固い箱がかかっていないかを調べる
-import { createWorld } from '../public/shared/track.js?v=6'
+import { createWorld } from '../public/shared/track.js?v=8'
 for (const stage of ['city', 'touge']) {
   const w = createWorld(stage)
   const bad = new Map()

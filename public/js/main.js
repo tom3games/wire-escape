@@ -1,27 +1,27 @@
 // 画面の入口。タイトル（裏でCPUの追跡のデモ）→ ガレージ → 警察と犯人 → 結果。
 // 物理と追跡の判定は shared/ のものをそのまま使い、ここは描画・入力・音・画面遷移だけを持つ。
 import * as THREE from 'three'
-import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=7'
-import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=7'
-import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=7'
-import { createNav } from '../shared/citynav.js?v=7'
-import { speedOf } from '../shared/physics.js?v=7'
-import { createDriver, drive, planRoute } from '../shared/ai.js?v=7'
-import { buildScene, propGeometry } from './scene.js?v=7'
-import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=7'
-import { FX } from './fx.js?v=7'
-import { Audio } from './audio.js?v=7'
-import { Input } from './input.js?v=7'
-import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=7'
-import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=7'
-import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=7'
-import { loadSky, makeComposer, setAniso } from './look.js?v=7'
-import { Q, LOW } from './quality.js?v=7'
-import { Online } from './online.js?v=7'
-import { Touch } from './touch.js?v=7'
-import { RunnerModel } from './runnermodel.js?v=7'
-import { findAnchor, rayHit, RUN } from '../shared/runner.js?v=7'
-import { setTrafficSpeed } from '../shared/traffic.js?v=7'
+import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=8'
+import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=8'
+import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=8'
+import { createNav } from '../shared/citynav.js?v=8'
+import { speedOf } from '../shared/physics.js?v=8'
+import { createDriver, drive, planRoute } from '../shared/ai.js?v=8'
+import { buildScene, propGeometry } from './scene.js?v=8'
+import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=8'
+import { FX } from './fx.js?v=8'
+import { Audio } from './audio.js?v=8'
+import { Input } from './input.js?v=8'
+import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=8'
+import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=8'
+import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=8'
+import { loadSky, makeComposer, setAniso } from './look.js?v=8'
+import { Q, LOW } from './quality.js?v=8'
+import { Online } from './online.js?v=8'
+import { Touch } from './touch.js?v=8'
+import { RunnerModel } from './runnermodel.js?v=8'
+import { findAnchor, aimTap, RUN } from '../shared/runner.js?v=8'
+import { setTrafficSpeed } from '../shared/traffic.js?v=8'
 setTrafficSpeed(0.55) // 一般車は遅め（本人「車早すぎ」）
 
 // ---------------------------------------------------------------- ロード画面（index.html の #loader）の進み具合
@@ -717,7 +717,9 @@ function aimWireAt(cx, cy) {
   _ndc.set((cx - rc.left) / rc.width * 2 - 1, -((cy - rc.top) / rc.height) * 2 + 1)
   _ray.setFromCamera(_ndc, camera)
   const o = _ray.ray.origin, d = _ray.ray.direction
-  pendingWire = { at: rayHit(world, o.x, o.y, o.z, d.x, d.y, d.z, 400) }
+  // 空中なら地面（道・屋上）のタップでも掛かる（地面ワイヤー）。建物が近ければ建物が先
+  const air = !!(me && !me.grounded && !me.climbing)
+  pendingWire = { at: aimTap(world, o.x, o.y, o.z, d.x, d.y, d.z, air, 400) }
 }
 document.addEventListener('pointerdown', e => {
   if (mode !== 'race' || !me || !me.isRunner || paused || menuOpen) return
@@ -1734,11 +1736,13 @@ function runnerEvent(c, ev, mine, vol) {
     case 'wire':
       if (vol) audio.whip()
       fx.sparks(ev.x, ev.y, ev.z, 6, null, 4)
-      if (mine && ev.combo >= 2) hud.feed('SWING x' + ev.combo, ev.combo >= RUN.hideCombo - 2 && ev.combo < RUN.hideCombo ? t('comboHint').replace('{n}', RUN.hideCombo - ev.combo) : '')
+      if (mine && ev.combo >= 2 && !ev.ground) hud.feed('SWING x' + ev.combo, ev.combo >= RUN.hideCombo - 2 && ev.combo < RUN.hideCombo ? t('comboHint').replace('{n}', RUN.hideCombo - ev.combo) : '')
       return true
     case 'unwire':
       if (ev.zip && vol) audio.zip()
       // 速く離すと風を切る（録音の whoosh）・視野が一瞬広がる
+      // 地面ワイヤーが外れた: 速さによらず風切りと視野の広がり（スリングショット）
+      if (mine && ev.ground) { const v = Math.hypot(c.vx, c.vy, c.vz); audio.swoosh(Math.min(0.8, 0.35 + v / 80)); juice.fovKick = Math.max(3, Math.min(6, (v - 16) * 0.3)); return true }
       if (mine && !ev.auto && !ev.zip) { const v = Math.hypot(c.vx, c.vy, c.vz); if (v > 16) { audio.swoosh(Math.min(0.8, v / 50)); juice.fovKick = Math.min(6, (v - 16) * 0.3) } }
       return true
     case 'zip': if (vol) audio.zip(); if (mine) fx.addShake(0.3); return true

@@ -1,9 +1,9 @@
 // オンライン対戦の画面側。部屋の作成・参加・ロビー・レース中の送受信・補間を受け持つ。
 // 自分の車はここで物理を回し（遅延なし）、状態を 30回/秒 送る。他の車はサーバーのスナップショットを
 // 100ms 遅らせて補間して描く（届く間隔のばらつきで車が飛ばないように）。
-import { connect } from './net.js?v=7'
-import { GAME } from '../shared/config.js?v=7'
-import { packCar } from '../shared/physics.js?v=7'
+import { connect } from './net.js?v=8'
+import { GAME } from '../shared/config.js?v=8'
+import { packCar } from '../shared/physics.js?v=8'
 
 const INTERP_DELAY = 0.1
 const SEND_HZ = GAME.netHz

@@ -1,8 +1,8 @@
 // 警察と犯人を CPU だけで何回も走らせ、結末（逮捕・逃げ切り・隠れ家）と時間を数える。
 // node tools/sim-chase.mjs [回数] [警察の数]
-import { createWorld } from '../public/shared/track.js?v=6'
-import { Chase } from '../public/shared/chase.js?v=6'
-import { GAME } from '../public/shared/config.js?v=6'
+import { createWorld } from '../public/shared/track.js?v=8'
+import { Chase } from '../public/shared/chase.js?v=8'
+import { GAME } from '../public/shared/config.js?v=8'
 const N = Number(process.argv[2] || 8), COPS = Number(process.argv[3] || 3)
 const tally = {}
 for (let k = 0; k < N; k++) {

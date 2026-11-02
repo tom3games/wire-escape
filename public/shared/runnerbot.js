@@ -1,4 +1,6 @@
 // CPU のワイヤーの人（タイトル画面のデモと、逮捕・逃げ切りの釣り合いを測るのに使う）。
+import { floorAt } from './runner.js?v=8'
+
 // 逃げる道は車の CPU 犯人と同じ考え方（chase.planRobber: 警察から遠い交差点へ）。警察が近いとワイヤーで飛ぶ
 
 export function runnerBot(ch, e, dt) {
@@ -26,7 +28,12 @@ export function runnerBot(ch, e, dt) {
   const near = ch.nearestCopDist(r)
   const swing = near < 140 || e.bust > 0.05 || !r.grounded
   e.botT = (e.botT || 0) + dt
-  if (swing && !r.rope && !r.climbing && (r.grounded || r.vy < 1) && e.botT > 0.25 && !e.botPrev) { inp.wire = true; e.botT = 0 }
+  // 地面ワイヤーを使う上手い人（釣り合いの測定だけ。tools/sim-runner.mjs botg）: 空中で下り始めて低くなったら、進む先の道へ掛けて加速
+  const fl = e.groundWire && !r.grounded && !r.climbing ? floorAt(ch.world, r.x, r.z, r.y + 0.5).h : 0
+  if (e.groundWire && swing && !r.rope && !r.climbing && !r.grounded && r.vy < 0 && r.y - fl > 4 && r.y - fl < 14 && e.botT > 0.25 && !e.botPrev) {
+    const gx = r.x + Math.sin(want) * 26, gz = r.z + Math.cos(want) * 26
+    inp.wire = true; inp.wireAt = { x: gx, y: floorAt(ch.world, gx, gz, r.y).h, z: gz, ground: true }; e.botT = 0
+  } else if (swing && !r.rope && !r.climbing && (r.grounded || r.vy < 1) && e.botT > 0.25 && !e.botPrev) { inp.wire = true; e.botT = 0 }
   // 掛けたワイヤーで、警察がすぐ下にいたら巻き取りで逃げる
   // 巻き取りボタンは無くした（2026-11-02）
   e.botPrev = !!(inp.wire || inp.boost)
