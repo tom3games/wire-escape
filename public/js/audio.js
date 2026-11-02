@@ -1,7 +1,8 @@
 // 音は録音素材（public/snd、出所は public/CREDITS.md）。2026-11-02 合成音から置き換え（「AI特有のSE」対策）。
 // 鳴らした回数は window.__sfxCalls（テストの mute.mjs が __soundCalls を数値で使うので名前を分けた）
 // 合成で鳴らすのはタイヤの鳴き（車モードだけ）。風は 2026-11-03 に録音のループへ置き換え
-const F = n => 'snd/' + n + '.mp3'
+// 拡張子が付いていればそのまま（ループは継ぎ目の無音が出ない WAV）、無ければ mp3
+const F = n => 'snd/' + (/\.(wav|mp3)$/.test(n) ? n : n + '.mp3')
 const B = '75-cc0-breaking-falling-hit-sfx_sfx_breaking_and_falling_bfh1_', IF = 'interface-sounds_kenney_interfaceSounds_Audio_', RPG = '50-rpg-sound-effects_RPGsounds_Kenney_OGG_'
 const S = {
   whip: ['swishes-sound-pack_swishes_swishes_swish-1', 'swishes-sound-pack_swishes_swishes_swish-2', 'swishes-sound-pack_swishes_swishes_swish-3'],
@@ -23,10 +24,14 @@ const S = {
   bell: ['bell-dingschimes_bell_ding2'],
   fanfare: ['85-short-music-jingles_jingleSounds_Kenney_OGG_jingles_SAX_jingles_SAX03'],
   whoosh: ['air-whoosh_whoosh2_0'],
-  wind: ['100-cc0-sfx-2_sfx_100_v2_sfx100v2_air_01'],   // 風の環境音（録音をループ。速さで大きく）
+  // 風の環境音。2026-11-03 air_01（2.6秒の一発の「プシュッ」）をループしていて水の音に聞こえたので、継ぎ目なしの録音ループ（WAV のまま）に替えた
+  wind: ['wind_loop.wav'],
   siren: ['sirens-and-alarm-noise_siren_0'], rotor: ['helicopter-sounds_helicopter_0'], engine: ['racing-car-engine-sound-loops_loop_0'],
   bgm: ['music_catch-me-if-you-can_dominoespizzaakacatchme_0']
 }
+
+// 風の音量。地面 0、空中で min(0.35, (v - 16) / 40)
+export const windVol = (v, air) => air ? Math.min(0.35, Math.max(0, (v - 16) / 40)) : 0
 
 export class Audio {
   constructor() {
@@ -117,7 +122,7 @@ export class Audio {
     const t = this.ctx.currentTime, r = Math.min(1.4, speed / top)
     this._loop('engine', active ? 0.12 + throttle * 0.12 + (boosting ? 0.05 : 0) : 0, null, 0.7 + r * 0.9 + (1 - engineHealth) * (Math.random() * 0.1))
     this.screech.g.gain.setTargetAtTime(active && grounded && slip > 4 ? Math.min(0.22, (slip - 4) * 0.02) : 0, t, 0.06)
-    this._loop('wind', active ? Math.min(0.25, r * r * 0.22) + (grounded ? 0 : 0.08) : 0)
+    this._loop('wind', active ? windVol(speed, !grounded) : 0)
   }
 
   // ワイヤーの人: エンジンは鳴らさず、速さと高さで風切りだけ
@@ -125,9 +130,8 @@ export class Audio {
     if (!this.ctx) return
     const t = this.ctx.currentTime
     this._loop('engine', 0); this.screech.g.gain.setTargetAtTime(0, t, 0.06)
-    // 風の環境音: 速さで大きく・少し高く（空中しっぽ取り v5 と同じ曲線）
-    const k = Math.min(1, Math.max(0, (speed - 6) / 32))
-    this._loop('wind', active ? Math.min(0.75, k + (air ? 0.03 : 0)) : 0, null, 0.85 + k * 0.35)
+    // 風: 地面では鳴らさない。空中で 16m/s を超えてから上げる（走るだけでは鳴らない）
+    this._loop('wind', active ? windVol(speed, air) : 0)
   }
   // 速く離した瞬間の風切り（録音の whoosh）
   swoosh(vol) { this._play('whoosh', { vol, rate: 0.9 + Math.random() * 0.2 }) }

@@ -38,11 +38,19 @@
 
 - 速さの線（canvas #speedfx、20m/s から速いほど多く濃く）。CSS の流れる線は車のニトロだけに残した
 - 視野は速いほど広く（最大+18度）＋速く離した瞬間に一瞬広がる（fovKick）。振り子の向きに少し傾く（最大0.1rad、カメラの右向きから横速度を取る）
-- 風の環境音を録音のループ（air_01）にして速さで大きく（ノイズ合成をやめた）。速く手で離すと録音の whoosh
+- 風の環境音を録音のループにして速さで大きく（ノイズ合成をやめた。2026-11-03 に air_01 から wind_loop.wav へ）。速く手で離すと録音の whoosh
 - 山場で一瞬止める＋画面のふちの光（#hitflash）＋揺れ: 警察が見失った 0.12秒・踏みつけ 0.1秒・ネットを抜けた 0.05秒・穴から出た 0.04秒
 - ワイヤー中だけ重力1.07倍・最高速 38→41（逃げる側だけ。警官は 38 のまま）。CPU 128 回で逃げ切り 58%→57%（両方に掛けると 52% に落ちたので警官は外した）
 - 確認: `node tools/wire-juice.mjs [webkit]`（22項目、shots/juice/wire-*）
-- キャッシュバスター: public の js/shared の import と tools/test/lib の import に全部 `?v=N` が付いている。上げる時は `grep -rl "?v=5'" public tools test lib | xargs sed -i '' "s/?v=5'/?v=6'/g"` と index.html の2つ
+- キャッシュバスター: public の js/shared の import と tools/test/lib の import に全部 `?v=N` が付いている。上げる時は `grep -rl "?v=6'" public tools test lib | xargs sed -i '' "s/?v=6'/?v=7'/g"` と index.html の3か所（style.css・modulepreload・main.js）
+
+## ロード画面と音（2026-11-03）
+
+- 開いた最初は「警察無線を傍受しています」のロード画面（index.html の #loader。HTML/CSS/SVG だけ）。回転灯の光が回り、周波数の針が本物の読み込みで進む: 起動スクリプト45本で40%、街の素材（THREE の読み込み係が数えるテクスチャ・空・壁）で55%、最初のコマで残り。全部読み終えて2コマ後に消える。車のモデル（1.5MB）は消えてから読む（それまで手続きの車）
+- スクリプトが読めない・起動前のエラー・30秒まったく進まない、のどれかで「無線が途切れました」と原因・もう一度ボタン
+- import を足したら index.html の `jsTotal` を直す（`node tools/loader-test.mjs [webkit]` が数の食い違いを見つける）
+- 読み込みの速さ: `node tools/loadtime.mjs [URL|local]`（Fast 3G 相当）
+- 風: 本人「謎の水の音がずっと鳴ってる」。air_01（2.6秒の一発の音）をループしていて2.6秒ごとに水のようなシューが鳴り、走るだけ（6m/s）で鳴っていた。録音のループ snd/wind_loop.wav（Howling wind・CC0・WAV のまま）に替え、地面では 0、空中で min(0.35, (v-16)/40)
 
 ## 操作
 

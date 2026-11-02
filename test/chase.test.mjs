@@ -1,12 +1,12 @@
 // 警察と犯人の判定の単体テスト（描画なし）
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createWorld } from '../public/shared/track.js?v=5'
-import { Chase } from '../public/shared/chase.js?v=5'
-import { createNav } from '../public/shared/citynav.js?v=5'
-import { createCar, step, speedOf } from '../public/shared/physics.js?v=5'
-import { createTraffic } from '../public/shared/traffic.js?v=5'
-import { CHASE, GAME } from '../public/shared/config.js?v=5'
+import { createWorld } from '../public/shared/track.js?v=6'
+import { Chase } from '../public/shared/chase.js?v=6'
+import { createNav } from '../public/shared/citynav.js?v=6'
+import { createCar, step, speedOf } from '../public/shared/physics.js?v=6'
+import { createTraffic } from '../public/shared/traffic.js?v=6'
+import { CHASE, GAME } from '../public/shared/config.js?v=6'
 
 const DT = GAME.step
 const city = () => createWorld('city')
@@ -222,7 +222,7 @@ test('警察ヘリ: 手配度3で現れ、赤い円で予告してから1.8秒�
   assert.ok(rob.dmg.body < 0.8 && rob.dmg.body >= 0.08, `傷む ${rob.dmg.body}`)
   assert.ok(rob.vy > 3, '吹き飛ぶ')
   // 何発当たっても大破しない
-  for (let k = 0; k < 6; k++) { const e = ch.entry('r'); rob.y = 0.55; rob.vy = 0; const s = { x: rob.x, z: rob.z, r: CHASE.strikeRadius } ; ch.events.length = 0; (await import('../public/shared/chase.js?v=5')).blast(rob, s) }
+  for (let k = 0; k < 6; k++) { const e = ch.entry('r'); rob.y = 0.55; rob.vy = 0; const s = { x: rob.x, z: rob.z, r: CHASE.strikeRadius } ; ch.events.length = 0; (await import('../public/shared/chase.js?v=6')).blast(rob, s) }
   assert.ok(rob.dmg.body >= 0.08 && rob.wreck === 0, '大破しない')
   // 避ける: 次の予告の円から 20m 離れる
   let w2 = null
@@ -321,7 +321,7 @@ test('拳銃: 手配度1では撃たず、2から CPU の警察が近くの犯�
 })
 
 test('スパイクベルト: 手配度4から犯人の行く手の道に敷き、踏むとパンク（遅く滑る）。空いた側は通れる。警察は踏んでも平気。修理で直る', async () => {
-  const { puncture } = await import('../public/shared/chase.js?v=5')
+  const { puncture } = await import('../public/shared/chase.js?v=6')
   const { ch, rob, copCars } = chase()
   run(ch, GAME.countdownSec + 0.1)
   for (const c of copCars) { c.x = rob.x + 500; c.z = rob.z }

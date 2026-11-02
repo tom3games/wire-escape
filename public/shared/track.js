@@ -7,8 +7,8 @@
 //   3. 大峡谷      A 西を大回り(修理ピットあり) / D 東の崖っぷち林道(テクニカル) / E 崩れた橋を飛ぶ(要ブースト・落ちたら谷底)
 //   4. 丘と崖      A 東の外周(修理ピットあり) / D 西の山道ヘアピン / B+E 鉱山道を突破して崖から飛び降りる(高リスク)
 
-import { DESTRUCT, PHYS, SURFACE, GAME } from './config.js?v=5'
-import { buildCity, cityTerrain } from './city.js?v=5'
+import { DESTRUCT, PHYS, SURFACE, GAME } from './config.js?v=6'
+import { buildCity, cityTerrain } from './city.js?v=6'
 
 export const FALL_SEC = 1.6  // 鉄塔が倒れ切るまで
 const sstep = (a, b, x) => { const t = Math.max(0, Math.min(1, (x - a) / (b - a))); return t * t * (3 - 2 * t) }

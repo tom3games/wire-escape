@@ -1,7 +1,7 @@
 // 人の動きを描画なしで試す: 走る / 壁を登る / ワイヤーでスイング / 巻き取り / 運河
-import { createWorld } from '../public/shared/track.js?v=5'
-import { createRunner, stepRunner, findAnchor, RUN } from '../public/shared/runner.js?v=5'
-import { createNav } from '../public/shared/citynav.js?v=5'
+import { createWorld } from '../public/shared/track.js?v=6'
+import { createRunner, stepRunner, findAnchor, RUN } from '../public/shared/runner.js?v=6'
+import { createNav } from '../public/shared/citynav.js?v=6'
 const world = createWorld('city'), nav = createNav(world)
 const dt = 1 / 60
 let fails = 0

@@ -3,8 +3,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import WebSocket from 'ws'
 import { startServer } from '../server.mjs'
-import { createWorld } from '../public/shared/track.js?v=5'
-import { createNav } from '../public/shared/citynav.js?v=5'
+import { createWorld } from '../public/shared/track.js?v=6'
+import { createNav } from '../public/shared/citynav.js?v=6'
 import { passesThroughWall } from '../lib/game.mjs'
 
 const W = createWorld('city')

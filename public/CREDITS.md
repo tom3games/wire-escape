@@ -50,3 +50,4 @@
 - snd/racing-car-engine-sound-loops_loop_0.mp3: racing car engine sound loops / domasx2 / CC0
 - snd/music_catch-me-if-you-can_dominoespizzaakacatchme_0.mp3: Catch me if you can! / poinl / CC0
 - snd/squeak-toy-sounds_squeak_toy_squeak_toy_squeak_toy_-_squeak1.mp3: Squeak toy sounds / bart / CC0
+- snd/wind_loop.wav: Howling wind / Tvabutzku1234 / CC0（Wikimedia Commons）。継ぎ目なしの14秒ループに加工

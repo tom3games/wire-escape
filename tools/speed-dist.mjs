@@ -1,7 +1,7 @@
 // CPU のワイヤーの人の速さの分布（ワイヤーを変えた前後で比べる）。node tools/speed-dist.mjs [回数=8]
-import { createWorld } from '../public/shared/track.js?v=5'
-import { Chase } from '../public/shared/chase.js?v=5'
-import { setTrafficSpeed } from '../public/shared/traffic.js?v=5'
+import { createWorld } from '../public/shared/track.js?v=6'
+import { Chase } from '../public/shared/chase.js?v=6'
+import { setTrafficSpeed } from '../public/shared/traffic.js?v=6'
 setTrafficSpeed(0.55)
 const N = +(process.argv[2] || 8), world = createWorld('city')
 const sp = [], air = []; let wires = 0, escapes = 0, secs = 0, ropeLen = []

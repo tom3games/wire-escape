@@ -1,8 +1,8 @@
 // ワイヤーの人（犯人）と CPU の警察を描画なしで戦わせ、勝ち負けの割合を見る
 //   node tools/sim-runner.mjs [回数=12] [警察=5] [bot|still|ground]
-import { createWorld } from '../public/shared/track.js?v=5'
-import { Chase } from '../public/shared/chase.js?v=5'
-import { setTrafficSpeed } from '../public/shared/traffic.js?v=5'
+import { createWorld } from '../public/shared/track.js?v=6'
+import { Chase } from '../public/shared/chase.js?v=6'
+import { setTrafficSpeed } from '../public/shared/traffic.js?v=6'
 setTrafficSpeed(0.55)
 const N = +(process.argv[2] || 12), COPS = +(process.argv[3] || 5), KIND = process.argv[4] || 'bot'
 const world = createWorld('city')

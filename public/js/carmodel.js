@@ -348,7 +348,8 @@ const VARIANT = { // 車種ごとの体格（x=幅, y=高さ, z=長さ の倍率
 export function loadCarModel(url = 'assets/models/car.glb') {
   if (loading) return loading
   loading = new Promise((resolve, reject) => {
-    new GLTFLoader().load(url, gltf => {
+    // 車のモデルはロード画面が消えてから読む（手続きの車で先に遊べる）ので、ロード画面の数には入れない
+    new GLTFLoader(new THREE.LoadingManager()).load(url, gltf => {
       const src = gltf.scene
       src.updateMatrixWorld(true)
       const find = n => src.getObjectByName(n)

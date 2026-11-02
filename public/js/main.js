@@ -1,28 +1,37 @@
 // 画面の入口。タイトル（裏でCPUの追跡のデモ）→ ガレージ → 警察と犯人 → 結果。
 // 物理と追跡の判定は shared/ のものをそのまま使い、ここは描画・入力・音・画面遷移だけを持つ。
 import * as THREE from 'three'
-import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=5'
-import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=5'
-import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=5'
-import { createNav } from '../shared/citynav.js?v=5'
-import { speedOf } from '../shared/physics.js?v=5'
-import { createDriver, drive, planRoute } from '../shared/ai.js?v=5'
-import { buildScene, propGeometry } from './scene.js?v=5'
-import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=5'
-import { FX } from './fx.js?v=5'
-import { Audio } from './audio.js?v=5'
-import { Input } from './input.js?v=5'
-import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=5'
-import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=5'
-import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=5'
-import { loadSky, makeComposer, setAniso } from './look.js?v=5'
-import { Q, LOW } from './quality.js?v=5'
-import { Online } from './online.js?v=5'
-import { Touch } from './touch.js?v=5'
-import { RunnerModel } from './runnermodel.js?v=5'
-import { findAnchor, rayHit, RUN } from '../shared/runner.js?v=5'
-import { setTrafficSpeed } from '../shared/traffic.js?v=5'
+import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=6'
+import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=6'
+import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=6'
+import { createNav } from '../shared/citynav.js?v=6'
+import { speedOf } from '../shared/physics.js?v=6'
+import { createDriver, drive, planRoute } from '../shared/ai.js?v=6'
+import { buildScene, propGeometry } from './scene.js?v=6'
+import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=6'
+import { FX } from './fx.js?v=6'
+import { Audio } from './audio.js?v=6'
+import { Input } from './input.js?v=6'
+import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=6'
+import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=6'
+import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=6'
+import { loadSky, makeComposer, setAniso } from './look.js?v=6'
+import { Q, LOW } from './quality.js?v=6'
+import { Online } from './online.js?v=6'
+import { Touch } from './touch.js?v=6'
+import { RunnerModel } from './runnermodel.js?v=6'
+import { findAnchor, rayHit, RUN } from '../shared/runner.js?v=6'
+import { setTrafficSpeed } from '../shared/traffic.js?v=6'
 setTrafficSpeed(0.55) // 一般車は遅め（本人「車早すぎ」）
+
+// ---------------------------------------------------------------- ロード画面（index.html の #loader）の進み具合
+// テクスチャ・空・壁の画像は THREE の読み込み係を通るので、頼んだ数と読み終わった数をそのまま数える
+const LD = window.__ld || { items: 0, itemsTotal: 0, upd() {}, finish() {} }
+{
+  const LM = THREE.DefaultLoadingManager, st = LM.itemStart.bind(LM), en = LM.itemEnd.bind(LM)
+  LM.itemStart = u => { LD.itemsTotal++; st(u); LD.upd() }
+  LM.itemEnd = u => { LD.items++; en(u); LD.upd() }
+}
 
 const $ = id => document.getElementById(id)
 const STEP = GAME.step
@@ -1255,8 +1264,21 @@ function frame() {
     preview.r.render(preview.s, preview.c)
   }
   window.__btrReady = true
+  if (!window.__btrLoaded) checkLoaded(now)
 }
 let wasBoosting = false
+
+// 最初のコマが描けて、頼んだ素材を全部読み終えたらロード画面を消す。読み終えた絵を GPU に送るコマを2つ挟む
+// 何かが返ってこないまま止まっても遊べるように、最初のコマから60秒で打ち切る
+let ldStable = 0, ldFirst = 0
+function checkLoaded(now) {
+  if (!ldFirst) ldFirst = now
+  if (LD.items < LD.itemsTotal && now - ldFirst < 60000) { ldStable = 0; return }
+  if (++ldStable < 3) return
+  window.__btrLoaded = true
+  LD.finish()
+  startCarModel()
+}
 
 // 無線の文言（英語のときは場所と方角も英語に）
 const AREA_EN = { 'ダウンタウン': 'downtown', '運河沿い': 'the canal', '北地区': 'the north', '南地区': 'the south', '北東地区': 'the northeast', '北西地区': 'the northwest', '南東地区': 'the southeast', '南西地区': 'the southwest' }
@@ -2089,8 +2111,8 @@ serverAvailable().then(ok => {
 // ---------------------------------------------------------------- 起動
 toTitle()
 requestAnimationFrame(frame)
-// 実車モデルは画面が出てから読む（読み終わるまでは手続きの車で走れる）。届いたら今いる車を差し替える
-setTimeout(() => loadCarModel(Q.carLite ? 'assets/models/car_lite.glb' : 'assets/models/car.glb').then(() => {
+// 実車モデルはロード画面が消えてから読む（遅い回線で街のテクスチャと取り合わない。読み終わるまでは手続きの車で走れる）。届いたら今いる車を差し替える
+const startCarModel = () => loadCarModel(Q.carLite ? 'assets/models/car_lite.glb' : 'assets/models/car.glb').then(() => {
   if (!race) return
   for (const e of race.entries) {
     const old = models.get(e.id)
@@ -2103,7 +2125,7 @@ setTimeout(() => loadCarModel(Q.carLite ? 'assets/models/car_lite.glb' : 'assets
   }
   if (preview) preview.key = ''
   buildTrafficPool()
-}).catch(err => console.warn('car model', err)), 300)
+}).catch(err => console.warn('car model', err))
 addEventListener('pointerdown', () => audio.start(), { once: true })
 
 // 検証用の窓口（本番の操作には使わない）
