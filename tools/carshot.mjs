@@ -1,9 +1,11 @@
 // 車を近くで撮る（ガレージのプレビューを大きくして撮る）
 import { chromium } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 const srv = await serveStatic(5194)
-const b = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
-const p = await b.newPage({ viewport: { width: 1280, height: 720 } })
+const b = await chromium.launch({ args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+const pCtx = await b.newContext({ viewport: { width: 1280, height: 720 } }); await muteContext(pCtx)
+const p = await pCtx.newPage()
 const errs = []; p.on('pageerror', e => errs.push(e.message)); p.on('console', m => m.type() === 'error' && !m.text().includes('404') && errs.push(m.text()))
 await p.goto('http://localhost:5194/'); await p.waitForFunction(() => window.__btrReady)
 await p.selectOption('#cpuSelect', '0'); await p.waitForTimeout(3000); await p.click('#btnOffline'); await p.waitForTimeout(4500)

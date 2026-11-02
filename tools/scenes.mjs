@@ -1,12 +1,14 @@
 // 場面を作って止めて撮る: 落とし穴（予告・開いた・落ちた）・飛んでくるネット・捕まった網・ダウン・踏みつけ前・結果（逃げ切り・逮捕）
 import { chromium } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/scenes/', import.meta.url).pathname
 await mkdir(OUT, { recursive: true })
 const srv = await serveStatic(5199)
-const b = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
-const p = await (await b.newContext({ viewport: { width: 1280, height: 720 }, locale: 'ja-JP' })).newPage()
+const b = await chromium.launch({ args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+const pCtx = await b.newContext({ viewport: { width: 1280, height: 720 }, locale: 'ja-JP' }); await muteContext(pCtx)
+const p = await pCtx.newPage()
 const errs = []
 p.on('pageerror', e => errs.push(e.message))
 p.on('console', m => { if (m.type() === 'error' && !/healthz|fonts|404/.test(m.text())) errs.push(m.text()) })

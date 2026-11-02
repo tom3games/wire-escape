@@ -523,6 +523,9 @@ body.touch .radio { top: 54px; font-size: 12px; padding: 5px 10px; }
 }
 
 /* ---------------------------------------------------------- 爽快感: 流れる線・ご褒美の文字・逮捕と逃げ切りの光 */
+/* ワイヤーの人の速さの線（canvas）と、山場の瞬間に光る画面のふち（2026-11-03 空中しっぽ取り v5 から） */
+#speedfx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+#hitflash { position: absolute; inset: 0; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at center, rgba(255,255,255,0) 35%, rgba(255,236,200,0.55) 100%); }
 .speedlines { position: absolute; inset: -12%; pointer-events: none; opacity: 0; transition: opacity .25s;
   background: repeating-conic-gradient(from 0deg at 50% 50%, rgba(255,255,255,0) 0deg 4deg, rgba(255,255,255,0.5) 4.3deg, rgba(255,255,255,0) 4.8deg 11deg);
   -webkit-mask-image: radial-gradient(ellipse 60% 55% at 50% 50%, transparent 55%, #000 100%); mask-image: radial-gradient(ellipse 60% 55% at 50% 50%, transparent 55%, #000 100%);

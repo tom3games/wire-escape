@@ -2,6 +2,7 @@
 // 1回目は制限時間を70秒に縮めて自然に決着させ、2回目（再戦）は犯人を止めて警察に逮捕させる（両方の結末を見る）。
 // node tools/e2e-online.mjs [--webkit]   （サーバーは自分で起動する）
 import { chromium, webkit } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { startServer } from '../server.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/', import.meta.url).pathname
@@ -11,10 +12,10 @@ const srv = await startServer({ port: 8191, quiet: true })
 const URL0 = `http://localhost:${srv.port}/`
 const problems = [], notes = []
 const ok = (c, label, d = '') => (c ? notes : problems).push(`${c ? 'OK  ' : 'NG  '}${label}${d ? '  ' + d : ''}`)
-const args = ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist']
+const args = ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist']
 const bA = await chromium.launch({ args }), bB = await (process.argv.includes('--webkit') ? webkit : chromium).launch(process.argv.includes('--webkit') ? {} : { args })
 const mk = async (b, name) => {
-  const ctx = await b.newContext({ viewport: { width: 960, height: 540 }, locale: 'ja-JP' })
+  const ctx = await b.newContext({ viewport: { width: 960, height: 540 }, locale: 'ja-JP' }); await muteContext(ctx)
   const p = await ctx.newPage()
   p.errs = []
   p.on('console', m => { if (m.type() === 'error' && !m.text().includes('ERR_CONNECTION_CLOSED')) p.errs.push(m.text()) })

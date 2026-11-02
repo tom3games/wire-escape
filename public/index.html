@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;700&family=Dela+Gothic+One&family=M+PLUS+1p:wght@500;700;800&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="style.css?v=4">
+<link rel="stylesheet" href="style.css?v=5">
 <script>
   // 起動に失敗したときに原因を画面に出す（モジュールが読めないと module 内の catch は動かない）
   window.__btrErrors = []
@@ -181,6 +181,7 @@
     <div class="boost"><div class="boost-fill" id="hBoost"></div><div class="boost-win" id="hBoostWin"></div><span id="hBoostLbl">NITRO</span></div>
   </div>
   <div class="dmg-mini" aria-hidden="true"><i id="hBodyBar"></i></div>
+  <canvas id="speedfx"></canvas><div id="hitflash"></div>
   <div class="speedlines" id="hSpeedLines"></div>
   <div class="flashov" id="hFlash"></div>
   <div class="center-msg" id="hMsg"></div>
@@ -243,6 +244,6 @@
   </div>
 </section>
 
-<script type="module" src="js/main.js?v=4"></script>
+<script type="module" src="js/main.js?v=5"></script>
 </body>
 </html>

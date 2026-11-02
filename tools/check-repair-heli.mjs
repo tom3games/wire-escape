@@ -1,6 +1,7 @@
 // 修理工場とヘリのランチャーを実ブラウザで起こして確かめる（chromium と webkit、横持ちスマホ相当）。
 // node tools/check-repair-heli.mjs   スクショは shots/chase/
 import { chromium, webkit } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/chase/', import.meta.url).pathname
@@ -9,8 +10,8 @@ const srv = await serveStatic(5196)
 const res = []
 const ok = (c, l, d = '') => res.push(`${c ? 'OK' : 'NG'}  ${l}  ${d}`)
 for (const [name, bt] of [['chromium', chromium], ['webkit', webkit]]) {
-  const b = await bt.launch(name === 'chromium' ? { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
-  const ctx = await b.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: name === 'chromium' ? true : undefined, locale: 'ja-JP' })
+  const b = await bt.launch(name === 'chromium' ? { args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
+  const ctx = await b.newContext({ viewport: { width: 844, height: 390 }, deviceScaleFactor: 2, hasTouch: true, isMobile: name === 'chromium' ? true : undefined, locale: 'ja-JP' }); await muteContext(ctx)
   const p = await ctx.newPage()
   const errs = []
   p.on('pageerror', e => errs.push(e.message))

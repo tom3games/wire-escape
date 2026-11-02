@@ -1,6 +1,7 @@
 // iPhone 相当（webkit・タッチ）で、横持ちと縦持ちを実際に操作する。
 // 読み込みの量、タイトル→レース、アクセルを押して進むか、ハンドルで曲がるか、はみ出し、エラーを見る。
 import { webkit, chromium } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/mobile/', import.meta.url).pathname
@@ -11,8 +12,8 @@ const bad = [], good = []
 const ok = (c, l, d = '') => (c ? good : bad).push(`${c ? 'OK' : 'NG'}  ${l}  ${d}`)
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 for (const engine of process.argv.includes('--all') ? [webkit, chromium] : [webkit]) for (const [w, h] of [[844, 390], [844, 340], [667, 320], [568, 320], [932, 360], [390, 844], [375, 667]]) {
-  const b = await engine.launch(engine === chromium ? { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
-  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: engine === chromium ? true : undefined, hasTouch: true, userAgent: UA, locale: 'ja-JP' })
+  const b = await engine.launch(engine === chromium ? { args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: engine === chromium ? true : undefined, hasTouch: true, userAgent: UA, locale: 'ja-JP' }); await muteContext(ctx)
   const p = await ctx.newPage()
   const errs = []; let bytes = 0
   p.on('pageerror', e => errs.push(e.message))

@@ -1,6 +1,6 @@
 // 実ブラウザで通しで遊ぶ: タイトル → 逃げる → 走る → ワイヤーでスイング → 巻き取り。スクショとエラーを集める
 //   node tools/play.mjs [webkit] [WxH]
-import { muteContext } from './mute.mjs'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { webkit, chromium } from 'playwright'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'

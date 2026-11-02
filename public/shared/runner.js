@@ -13,7 +13,7 @@
 // 座標は車と同じ（x=東西, z=南北, yaw=0 で +z を向く）。y は足の高さ。
 // 体力は dmg.body（車と同じ名前にして、警察と犯人の判定 chase.js をそのまま使う）
 
-import { GAME } from './config.js'
+import { GAME } from './config.js?v=5'
 
 export const RUN = {
   radius: 0.42, height: 1.75,
@@ -42,7 +42,9 @@ export const RUN = {
   zipAcc: 22,                   // 巻き取りの加速（48→22）
   zipCd: 1,                     // （使っていない。表示の割り算用）
   zipExit: 7.5,                 // 巻き取りの終わりに前と上へ飛び出す速さ
-  maxSpeed: 38,
+  maxSpeed: 41,                 // 38→41（2026-11-03 空中しっぽ取り v5 の爽快感を移植。ほんの少しだけ速く）
+  copMaxSpeed: 38,              // 警官は前の最高速のまま
+  ropeG: 1.07,                  // ワイヤー中だけ重力を少し強く（振り子が速く回る）
   releaseVyMax: 9,              // 外した瞬間の上向きの速さの上限（振るたびに空へ昇り続けないように）
   drag: 0.012,
   releaseKick: 1.2,             // ワイヤーを外した瞬間に上へ少し跳ねる
@@ -433,11 +435,13 @@ function release(r, byPlayer) {
 
 function physics(r, thr, dt, world, passive) {
   const R = RUN.radius
-  if (!r.climbing) r.vy -= RUN.gravity * dt
+  const cop = r.role === 'cop'   // 速くするのは逃げる側だけ（警官は前のまま。追いつく釣り合いを崩さない）
+  if (!r.climbing) r.vy -= RUN.gravity * (r.rope && !cop ? RUN.ropeG : 1) * dt
   // 空気の抵抗と最高速
   if (!r.grounded) { const k = 1 - RUN.drag * dt * Math.hypot(r.vx, r.vy, r.vz) * 0.1; r.vx *= k; r.vz *= k }
   const sp3 = Math.hypot(r.vx, r.vy, r.vz)
-  if (sp3 > RUN.maxSpeed) { const k = RUN.maxSpeed / sp3; r.vx *= k; r.vy *= k; r.vz *= k }
+  const vmax = cop ? RUN.copMaxSpeed : RUN.maxSpeed
+  if (sp3 > vmax) { const k = vmax / sp3; r.vx *= k; r.vy *= k; r.vz *= k }
 
   const px = r.x, py = r.y, pz = r.z
   r.x += r.vx * dt; r.y += r.vy * dt; r.z += r.vz * dt

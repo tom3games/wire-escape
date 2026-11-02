@@ -1,14 +1,15 @@
 // 追いかけ視点の見え方を縦と横で撮る（前後比較用）。node tools/cam-shot.mjs ラベル  → shots/cam/
 import { chromium } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/cam/', import.meta.url).pathname
 await mkdir(OUT, { recursive: true })
 const srv = await serveStatic(5193)
 const label = process.argv[2] || 'now'
-const b = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+const b = await chromium.launch({ args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
 for (const [w, h] of [[390, 844], [844, 390]]) {
-  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'ja-JP' })
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true, locale: 'ja-JP' }); await muteContext(ctx)
   const p = await ctx.newPage()
   const errs = []
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error') errs.push(m.text()) })

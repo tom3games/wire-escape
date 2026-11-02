@@ -1,27 +1,27 @@
 // 画面の入口。タイトル（裏でCPUの追跡のデモ）→ ガレージ → 警察と犯人 → 結果。
 // 物理と追跡の判定は shared/ のものをそのまま使い、ここは描画・入力・音・画面遷移だけを持つ。
 import * as THREE from 'three'
-import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js'
-import { createWorld, FALL_SEC, terrain } from '../shared/track.js'
-import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js'
-import { createNav } from '../shared/citynav.js'
-import { speedOf } from '../shared/physics.js'
-import { createDriver, drive, planRoute } from '../shared/ai.js'
-import { buildScene, propGeometry } from './scene.js'
-import { CarModel, ProcCar, loadCarModel } from './carmodel.js'
-import { FX } from './fx.js'
-import { Audio } from './audio.js'
-import { Input } from './input.js'
-import { t, applyI18n, setLang, getLang, placeText } from './i18n.js'
-import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js'
-import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js'
-import { loadSky, makeComposer, setAniso } from './look.js'
-import { Q, LOW } from './quality.js'
-import { Online } from './online.js'
-import { Touch } from './touch.js'
-import { RunnerModel } from './runnermodel.js'
-import { findAnchor, rayHit, RUN } from '../shared/runner.js'
-import { setTrafficSpeed } from '../shared/traffic.js'
+import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=5'
+import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=5'
+import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=5'
+import { createNav } from '../shared/citynav.js?v=5'
+import { speedOf } from '../shared/physics.js?v=5'
+import { createDriver, drive, planRoute } from '../shared/ai.js?v=5'
+import { buildScene, propGeometry } from './scene.js?v=5'
+import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=5'
+import { FX } from './fx.js?v=5'
+import { Audio } from './audio.js?v=5'
+import { Input } from './input.js?v=5'
+import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=5'
+import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=5'
+import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=5'
+import { loadSky, makeComposer, setAniso } from './look.js?v=5'
+import { Q, LOW } from './quality.js?v=5'
+import { Online } from './online.js?v=5'
+import { Touch } from './touch.js?v=5'
+import { RunnerModel } from './runnermodel.js?v=5'
+import { findAnchor, rayHit, RUN } from '../shared/runner.js?v=5'
+import { setTrafficSpeed } from '../shared/traffic.js?v=5'
 setTrafficSpeed(0.55) // 一般車は遅め（本人「車早すぎ」）
 
 const $ = id => document.getElementById(id)
@@ -1363,6 +1363,7 @@ function raceEvent(ev) {
   if (ev.t === 'witnessHeat') hud.toast(t('msgWitnessHeat'))
   if (ev.t === 'lost' && ev.id === myId) {
     reward(t('msgLostThem'), t('msgLostThemSub').replace('{n}', ev.combo), 0)
+    peak(0.12, { kick: -8, flash: 1, shake: 0.7 })
     hud.radio(t('radioLostRunner'), 2.4); audio.radio()
   }
   if (ev.t === 'netFire') {
@@ -1402,7 +1403,9 @@ function raceEvent(ev) {
 
 // ---------------------------------------------------------------- 爽快感（ヒットストップ・スロー・ご褒美の文字とコンボ）
 // スローとヒットストップはオフラインだけ（オンラインは全員の時計が同じなので見た目だけ）
-const juice = { stop: 0, slow: 0, slowK: 1, combo: 0, comboT: 0, hitAt: -9, near: new Map(), cool: new Map() }
+const juice = { stop: 0, slow: 0, slowK: 1, combo: 0, comboT: 0, hitAt: -9, near: new Map(), cool: new Map(), fovKick: 0, flash: 0 }
+// 山場の瞬間: 一瞬止める・視野を一瞬動かす・画面のふちが光る・揺れる（2026-11-03 空中しっぽ取り v5 から移植）
+function peak(stop, { kick = -6, flash = 1, shake = 0.6 } = {}) { hitStop(stop); juice.fovKick = kick; juice.flash = Math.max(juice.flash, flash); fx.addShake(shake) }
 function hitStop(sec) { if (!onlineRace) juice.stop = Math.max(juice.stop, sec) }
 function slowMo(k, sec) { if (!onlineRace) { juice.slow = Math.max(juice.slow, sec); juice.slowK = k } }
 function juiceScale(dt) {
@@ -1713,6 +1716,8 @@ function runnerEvent(c, ev, mine, vol) {
       return true
     case 'unwire':
       if (ev.zip && vol) audio.zip()
+      // 速く離すと風を切る（録音の whoosh）・視野が一瞬広がる
+      if (mine && !ev.auto && !ev.zip) { const v = Math.hypot(c.vx, c.vy, c.vz); if (v > 16) { audio.swoosh(Math.min(0.8, v / 50)); juice.fovKick = Math.min(6, (v - 16) * 0.3) } }
       return true
     case 'zip': if (vol) audio.zip(); if (mine) fx.addShake(0.3); return true
     case 'zipNo': if (mine) hud.toast(t('msgZipNo')); return true
@@ -1741,7 +1746,7 @@ function runnerEvent(c, ev, mine, vol) {
       if (vol) audio.stomp()
       fx.flash(ev.x, ev.y, ev.z); fx.sparks(ev.x, ev.y, ev.z, 40, null, 12)
       for (let i = 0; i < 8; i++) fx.smoke(ev.x, ev.y, ev.z, { dark: 0.2, size: 2.2, life: 1.6, vy: 2.5, a: 0.6 })
-      if (mine) { fx.addShake(1.1); hitStop(0.09); slowMo(0.35, 0.6); reward(ev.cop ? 'STOMP!' : 'BOUNCE', ev.cop ? t('stompSub') : '') }
+      if (mine) { peak(0.1, { kick: -7, flash: 1, shake: 1.1 }); slowMo(0.35, 0.6); reward(ev.cop ? 'STOMP!' : 'BOUNCE', ev.cop ? t('stompSub') : '') }
       { const o = race.entry(ev.other); if (o && o.car.isRunner) { say(pick(LINES.stomped), o.car, 'normal', 1.5); audio.grunt(1) } }
       return true
     case 'netted':
@@ -1749,13 +1754,13 @@ function runnerEvent(c, ev, mine, vol) {
       say(pick(LINES.netted), c, 'normal', 1.4)
       return true
     case 'struggle': if (mine) audio.tick(); return true
-    case 'netFree': if (mine) { hud.toast(t('msgNetFree')); audio.whip() } return true
+    case 'netFree': if (mine) { hud.toast(t('msgNetFree')); audio.whip(); peak(0.05, { kick: 4, flash: 0.6, shake: 0.35 }) } return true
     case 'fellPit':
       if (mine) { hud.message(t('msgPit'), t('msgPitHint'), 1.4); audio.land(14); fx.addShake(0.8) }
       say(pick(LINES.pit), c, 'normal', 1.6)
       fx.dust(c.x, c.y + 2, c.z, 10, [0.45, 0.4, 0.33], 1.2)
       return true
-    case 'pitOut': if (mine) audio.whip(); return true
+    case 'pitOut': if (mine) { audio.whip(); peak(0.04, { kick: 4, flash: 0.5, shake: 0.3 }) } return true
     case 'splash':
       for (let i = 0; i < 24; i++) fx.emit(ev.x, -0.8, ev.z, { vx: (Math.random() - 0.5) * 6, vy: 4 + Math.random() * 6, vz: (Math.random() - 0.5) * 6, life: 0.9, size: 0.5, grow: 0.4, r: 0.75, g: 0.88, b: 1, a: 0.8 })
       if (vol) audio.splash()
@@ -1860,7 +1865,9 @@ function updateCamera(dt) {
   // ニトロ中は小刻みに揺れ、流れる線を出す
   if (c === me && c.boosting && !paused) fx.shake = Math.max(fx.shake, 0.12)
   const v3 = runner ? Math.hypot(c.vx, c.vy, c.vz) : v
-  hud.speedLines(c === me && (camMode !== 2 || runner) ? Math.max(0, Math.min(1, runner ? (v3 - 20) / 14 : (v - 30) / 16)) : 0, c === me && c.boosting)
+  // ワイヤーの人は canvas の流れる線（drawSpeed）。CSS の線は車のニトロだけ
+  hud.speedLines(c === me && !runner && camMode !== 2 ? Math.max(0, Math.min(1, (v - 30) / 16)) : 0, c === me && c.boosting)
+  drawSpeed(c === me && runner && !paused && mode === 'race' ? v3 : 0, paused ? 0 : dt)
   // 揺れ
   const sh = fx.shake
   if (sh > 0) camera.position.add(_v.set((Math.random() - 0.5) * sh, (Math.random() - 0.5) * sh * 0.7, (Math.random() - 0.5) * sh))
@@ -1869,10 +1876,46 @@ function updateCamera(dt) {
   const asp = camera.aspect
   const base = asp >= 1 ? 58 : Math.min(84, 2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(36)) / asp) * 180 / Math.PI)
   // 速さで視野が広がる（スピード感）。ニトロ中はさらに
-  const fov = base + Math.min(14, v * 0.3) + (c.boosting ? (c.perfect ? 12 : 8) : 0)
+  // ワイヤーの人は速いほど広く（最大+18度。空中しっぽ取り v5 と同じ）
+  const fov = base + (runner ? Math.min(18, Math.max(0, v3 - 6) * 0.5) : Math.min(14, v * 0.3)) + (c.boosting ? (c.perfect ? 12 : 8) : 0)
   cam.fov += (fov - cam.fov) * (1 - Math.exp(-dt * 4))
-  camera.fov = cam.fov
+  juice.fovKick *= Math.exp(-dt * 6)
+  camera.fov = cam.fov + (c === me ? juice.fovKick : 0)
   camera.updateProjectionMatrix()
+  // 振り子の向きに少しだけ傾く（カメラの実際の右向きから横へ流れる速さを取る。最大0.1rad）
+  if (runner) {
+    _v.set(1, 0, 0).applyQuaternion(camera.quaternion)
+    const rl = Math.hypot(_v.x, _v.z) || 1, lat = (c.vx * _v.x + c.vz * _v.z) / rl
+    cam.bank = (cam.bank || 0) + (Math.max(-0.1, Math.min(0.1, (c.rope ? lat : 0) * -0.004)) - (cam.bank || 0)) * (1 - Math.exp(-dt * 3))
+    camera.rotateZ(cam.bank)
+  } else cam.bank = 0
+}
+
+// 速さの線: 画面のふちから中心へ流れる白い線。速いほど多く濃く（20m/s から）。2D canvas なので軽い
+const spd = document.getElementById('speedfx'), sctx = spd.getContext('2d'), hf = document.getElementById('hitflash')
+const sLines = Array.from({ length: 46 }, () => ({ a: Math.random() * Math.PI * 2, p: Math.random(), s: 0.6 + Math.random() * 0.8, w: 1 + Math.random() * 2 }))
+let spdOn = false, hfO = -1
+function drawSpeed(v, dt) {
+  juice.flash = Math.max(0, juice.flash - Math.min(dt, 1 / 30) * 5)   // 重いコマが1つ挟まっても光が見える前に消えないように
+  const o = Math.round(juice.flash * 100) / 100; if (o !== hfO) { hfO = o; hf.style.opacity = o }
+  const k = Math.max(0, Math.min(1, (v - 20) / 18))
+  window.__speedK = k
+  if (k <= 0) { if (spdOn) { sctx.clearRect(0, 0, spd.width, spd.height); spdOn = false } return }
+  spdOn = true
+  const W = innerWidth, H = innerHeight, dpr = Math.min(2, devicePixelRatio || 1)
+  if (spd.width !== Math.round(W * dpr) || spd.height !== Math.round(H * dpr)) { spd.width = Math.round(W * dpr); spd.height = Math.round(H * dpr) }
+  sctx.setTransform(dpr, 0, 0, dpr, 0, 0); sctx.clearRect(0, 0, W, H)
+  const cx = W / 2, cy = H * 0.45, R = Math.hypot(W, H) * 0.55
+  sctx.lineCap = 'round'
+  const n = Math.round(sLines.length * (0.35 + 0.65 * k))
+  for (let i = 0; i < n; i++) {
+    const L = sLines[i]
+    L.p += dt * L.s * (1.6 + k * 2.4); if (L.p > 1) { L.p -= 1; L.a = Math.random() * Math.PI * 2 }
+    const r1 = R * (1.05 - L.p * 0.45), r0 = r1 - R * (0.12 + 0.2 * k) * L.s
+    const ca = Math.cos(L.a), sa = Math.sin(L.a)
+    sctx.strokeStyle = `rgba(255,255,255,${(0.1 + 0.32 * k) * Math.min(1, L.p * 4)})`; sctx.lineWidth = L.w
+    sctx.beginPath(); sctx.moveTo(cx + ca * r0, cy + sa * r0); sctx.lineTo(cx + ca * r1, cy + sa * r1); sctx.stroke()
+  }
 }
 
 // ---------------------------------------------------------------- オンライン
@@ -2066,7 +2109,7 @@ addEventListener('pointerdown', () => audio.start(), { once: true })
 // 検証用の窓口（本番の操作には使わない）
 window.__btr = {
   get world() { return world }, get race() { return race }, get me() { return me }, get mode() { return mode }, profile, startOffline: beginPlayerRace,
-  get online() { return online }, get myId() { return myId }, get camMode() { return camMode }, juice, get camHd() { return cam.hd }, snapCam() { snapCamera(); cam.hd = me ? me.yaw : 0; cam.pitch = 0 },
+  get online() { return online }, get myId() { return myId }, get camMode() { return camMode }, juice, get camHd() { return cam.hd }, get camBank() { return cam.bank || 0 }, snapCam() { snapCamera(); cam.hd = me ? me.yaw : 0; cam.pitch = 0 },
   setPaused: p => { paused = p }, fx, camera, renderer,
   autopilot() {
     if (!me) return

@@ -1,18 +1,19 @@
 // 爽快感の演出を実画面で起こして確かめる（パトカー撃破→スロー・テイクダウン文字、ニアミス、ニトロの流れる線）。
 // node tools/juice-check.mjs [chromium|webkit]  → shots/juice/
 import { chromium, webkit } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/juice/', import.meta.url).pathname
 await mkdir(OUT, { recursive: true })
 const srv = await serveStatic(5195)
 const engine = process.argv[2] === 'webkit' ? webkit : chromium
-const b = await engine.launch(engine === chromium ? { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
+const b = await engine.launch(engine === chromium ? { args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
 const bad = [], good = []
 const ok = (c, name, info = '') => (c ? good : bad).push(`${c ? 'OK' : 'NG'}  ${name}  ${info}`)
 for (const [w, h] of [[844, 390], [390, 844]]) {
   const tag = `${process.argv[2] || 'chromium'}-${w}x${h}`
-  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: engine === chromium ? true : undefined, hasTouch: true, locale: 'ja-JP' })
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: engine === chromium ? true : undefined, hasTouch: true, locale: 'ja-JP' }); await muteContext(ctx)
   const p = await ctx.newPage()
   const errs = []
   p.on('pageerror', e => errs.push(e.message)); p.on('console', m => { if (m.type() === 'error' && !/404/.test(m.text())) errs.push(m.text()) })

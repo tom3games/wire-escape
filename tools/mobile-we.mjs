@@ -1,7 +1,7 @@
 // iPhone 相当（webkit・タッチ）で 6 サイズ: タイトルが一画面、タッチのボタンで 走る→ワイヤー（巻き取りは無し）、
 // ボタンと表示がはみ出さず重ならない、エラー0。拡大止めも確かめる
 import { webkit } from 'playwright'
-import { muteContext } from './mute.mjs'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/mobile/', import.meta.url).pathname

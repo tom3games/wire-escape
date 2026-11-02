@@ -1,13 +1,14 @@
 // fps を測る。スマホ相当（タッチ・画素比3）の縦と横で、街ステージを自動運転させて数秒数える。
 // node tools/fps.mjs [ラベル]   （Mac の GPU を使い、CPU は CPU=4 倍遅くする。headless の既定はソフトウェア描画で遅い）
 import { chromium } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 const srv = await serveStatic(5197)
 const label = process.argv[2] || ''
 const out = []
 for (const [w, h] of [[390, 844], [844, 390]]) {
-  const b = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
-  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, locale: 'ja-JP' })
+  const b = await chromium.launch({ args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+  const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, locale: 'ja-JP' }); await muteContext(ctx)
   const p = await ctx.newPage()
   // スマホの CPU に寄せる（Mac の CPU を 4 分の 1 に絞る）。描画の差より処理の差が出やすい
   const cdp = await ctx.newCDPSession(p)

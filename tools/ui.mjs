@@ -1,16 +1,17 @@
 // 各画面を複数サイズで撮り、はみ出しとエラーを数える。node tools/ui.mjs [webkit]
 import { chromium, webkit } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { startServer } from '../server.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/ui/', import.meta.url).pathname
 await mkdir(OUT, { recursive: true })
 const srv = await startServer({ port: 8192, quiet: true })
 const useWebkit = process.argv.includes('webkit')
-const browser = await (useWebkit ? webkit : chromium).launch(useWebkit ? {} : { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+const browser = await (useWebkit ? webkit : chromium).launch(useWebkit ? {} : { args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
 const sizes = [[1920, 1080], [1366, 768], [1280, 720], [960, 540], [844, 390], [390, 844]]
 const bad = []
 for (const [w, h] of sizes) {
-  const ctx = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ja-JP' })
+  const ctx = await browser.newContext({ viewport: { width: w, height: h }, locale: 'ja-JP' }); await muteContext(ctx)
   const page = await ctx.newPage()
   const errs = []
   page.on('console', m => { if (m.type() === 'error' && !m.text().includes('ERR_CONNECTION_CLOSED')) errs.push(m.text()) })

@@ -1,12 +1,14 @@
 // 実画面を撮る。node tools/shot.mjs [台本名]
 import { chromium } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/', import.meta.url).pathname
 await mkdir(OUT, { recursive: true })
 const srv = await serveStatic(5190)
-const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] })
-const page = await browser.newPage({ viewport: { width: 1280, height: 720 }, locale: 'ja-JP' })
+const browser = await chromium.launch({ args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] })
+const pageCtx = await browser.newContext({ viewport: { width: 1280, height: 720 }, locale: 'ja-JP' }); await muteContext(pageCtx)
+const page = await pageCtx.newPage()
 const errs = []
 page.on('console', m => { if (m.type() === 'error' || m.type() === 'warning') errs.push(m.type() + ': ' + m.text()) })
 page.on('pageerror', e => errs.push('pageerror: ' + e.message))

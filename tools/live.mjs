@@ -1,9 +1,11 @@
 // 公開URLを chromium と webkit で開いて、オフラインで1レース走れるか確かめる
 import { chromium, webkit } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 const URL0 = 'https://tom3games.github.io/break-the-route/?v=' + Date.now()
-for (const [name, bt, opt] of [['chromium', chromium, { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] }], ['webkit', webkit, {}]]) {
+for (const [name, bt, opt] of [['chromium', chromium, { args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] }], ['webkit', webkit, {}]]) {
   const b = await bt.launch(opt)
-  const p = await b.newPage({ viewport: { width: 1280, height: 720 }, locale: 'ja-JP' })
+  const pCtx = await b.newContext({ viewport: { width: 1280, height: 720 }, locale: 'ja-JP' }); await muteContext(pCtx)
+  const p = await pCtx.newPage()
   const errs = []
   p.on('pageerror', e => errs.push(e.message))
   p.on('console', m => { if (m.type() === 'error' && !/healthz|404|fonts/.test(m.text())) errs.push(m.text()) })

@@ -1,10 +1,12 @@
 // OGP 画像（1200x630）を実際のゲーム画面から作る。node tools/og.mjs
 // 大通りの上をワイヤーでスイングする人と、下を走って追う警官を止めて撮り、左に文字をのせる
 import { chromium } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 const srv = await serveStatic(5193)
-const b = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
-const p = await b.newPage({ viewport: { width: 1200, height: 630 }, locale: 'ja-JP' })
+const b = await chromium.launch({ args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+const pCtx = await b.newContext({ viewport: { width: 1200, height: 630 }, locale: 'ja-JP' }); await muteContext(pCtx)
+const p = await pCtx.newPage()
 await p.goto('http://localhost:5193/')
 await p.waitForFunction(() => window.__btrReady)
 await p.evaluate(() => { window.__btr.profile.cpu = 4; window.__btr.startOffline('robber') })

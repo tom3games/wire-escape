@@ -1,6 +1,7 @@
 // スマホ7サイズ×2ブラウザで、全画面が上下スクロールなしで一画面に収まるか（枠の中のスクロールも数える）。
 // node tools/fit.mjs [画面名...]   スクショは shots/fit/
 import { chromium, webkit } from 'playwright'
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { startServer } from '../server.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/fit/', import.meta.url).pathname
@@ -11,9 +12,9 @@ const SIZES = [[844, 390], [844, 340], [667, 320], [568, 320], [932, 360], [390,
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const bad = [], good = []
 for (const [ename, engine] of [['webkit', webkit], ['chromium', chromium]]) {
-  const b = await engine.launch(ename === 'chromium' ? { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
+  const b = await engine.launch(ename === 'chromium' ? { args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
   for (const [w, h] of SIZES) {
-    const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: ename === 'chromium' ? true : undefined, hasTouch: true, userAgent: UA, locale: 'ja-JP' })
+    const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: ename === 'chromium' ? true : undefined, hasTouch: true, userAgent: UA, locale: 'ja-JP' }); await muteContext(ctx)
     const p = await ctx.newPage()
     const errs = []
     p.on('pageerror', e => errs.push(e.message))
