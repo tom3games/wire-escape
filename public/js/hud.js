@@ -214,6 +214,7 @@ export class HUD {
     const bEl = $('hBoost')
     bEl.style.width = Math.round((1 - cd / RUN.zipCd) * 100) + '%'
     const box = bEl.parentElement
+    box.style.display = 'none'   // 巻き取りは無くした（2026-11-02）
     box.classList.toggle('lock', !ready)
     box.classList.toggle('on', !!me.zipping)
     box.classList.remove('perfect')

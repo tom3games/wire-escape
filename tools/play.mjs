@@ -1,5 +1,6 @@
 // 実ブラウザで通しで遊ぶ: タイトル → 逃げる → 走る → ワイヤーでスイング → 巻き取り。スクショとエラーを集める
 //   node tools/play.mjs [webkit] [WxH]
+import { muteContext } from './mute.mjs'
 import { webkit, chromium } from 'playwright'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
@@ -9,8 +10,9 @@ const srv = await serveStatic(5197)
 const useWk = process.argv.includes('webkit')
 const size = (process.argv.find(a => /^\d+x\d+$/.test(a)) || '1280x720').split('x').map(Number)
 const engine = useWk ? webkit : chromium
-const b = await engine.launch(useWk ? {} : { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
+const b = await engine.launch(useWk ? {} : { args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] })
 const ctx = await b.newContext({ viewport: { width: size[0], height: size[1] }, locale: 'ja-JP', colorScheme: 'light' })
+await muteContext(ctx)
 const p = await ctx.newPage()
 const errs = []
 p.on('pageerror', e => errs.push('pageerror ' + e.message))

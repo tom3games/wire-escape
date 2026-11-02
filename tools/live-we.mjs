@@ -1,10 +1,12 @@
+import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 // 公開URLで確かめる: Chrome と iPhone 相当で開いて逃げる→ワイヤーが掛かる、エラー0、og.jpg が 200、OGP の meta
 import { chromium, webkit } from 'playwright'
 const URL0 = 'https://tom3games.github.io/wire-escape/'
 let bad = 0
 for (const [eng, opt] of [[chromium, { viewport: { width: 1280, height: 720 } }], [webkit, { viewport: { width: 390, height: 844 }, hasTouch: true, deviceScaleFactor: 2 }]]) {
-  const b = await eng.launch(eng === chromium ? { args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
-  const p = await (await b.newContext({ ...opt, locale: 'ja-JP' })).newPage()
+  const b = await eng.launch(eng === chromium ? { args: ['--mute-audio', '--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist'] } : {})
+  const cx = await b.newContext({ ...opt, locale: 'ja-JP' }); await muteContext(cx)
+  const p = await cx.newPage()
   const errs = []
   p.on('pageerror', e => errs.push(e.message))
   p.on('console', m => { if (m.type() === 'error' && !/healthz|fonts|404/.test(m.text())) errs.push(m.text()) })

@@ -1090,7 +1090,8 @@ function frame() {
     if (inp && menuOpen) inp = { throttle: 0, brake: 0.3, steer: 0 }
     if (inp && wantRespawn) { inp.respawn = true; wantRespawn = false }
     // 押した印は、物理が進むコマまで持ち越す（120Hz の画面では物理が進まないコマがあり、そこで押したものが消えないように）
-    // スマホのスティック: 倒した向き（カメラから見て）へ走る。ワイヤー中にワイヤーの方へ倒すと巻き取り
+    // スマホのスティック: 倒した向き（カメラから見て）へ走る（巻き取りは無し。2026-11-02 本人「巻き取りいらん」）
+    if (inp && me && me.isRunner) inp.boost = false
     if (inp && me && me.isRunner && touch.active && touch.stick && touch.stick.mag > 0.15) {
       const S = touch.stick
       const desired = cam.hd - Math.atan2(S.x, S.y)
@@ -1099,9 +1100,10 @@ function frame() {
       while (diff < -Math.PI) diff += Math.PI * 2
       inp.throttle = Math.max(inp.throttle, Math.min(1, S.mag * 1.3))
       inp.steer = Math.max(-1, Math.min(1, -diff * 2.5))
-      if (me.rope && S.mag > 0.5) {
-        const ad = Math.atan2(me.rope.x - me.x, me.rope.z - me.z)
-        if (Math.cos(desired - ad) > 0.8) inp.boost = true
+      // 壁に張り付いている時: スティックの上下で登り降り、左右で壁沿いに横へ（画面で見た左右に合わせる）
+      if (me.climbing) {
+        const cl = me.climbing, sideSign = (-Math.cos(cam.hd)) * cl.nz + Math.sin(cam.hd) * -cl.nx >= 0 ? 1 : -1
+        inp.wallY = Math.abs(S.y) > 0.25 ? S.y : 0; inp.wallX = Math.abs(S.x) > 0.25 ? S.x * sideSign : 0
       }
     }
     // 画面をタッチ・クリックした: その場所の建物へワイヤー（ワイヤー中なら外す）
@@ -1458,6 +1460,9 @@ ropeMesh.visible = false; ropeMesh.frustumCulled = false
 const ropePool = []
 const copRopeMat = new THREE.MeshBasicMaterial({ color: 0x8fd0ff })
 // 掛けられる点の印（前の上の建物に出る橙の輪）
+// 届かない所を押した時の × 印（0.8秒）
+const missMark = (() => { const c = document.createElement('canvas'); c.width = c.height = 64; const g = c.getContext('2d'); g.strokeStyle = '#ff3b30'; g.lineWidth = 10; g.lineCap = 'round'; g.beginPath(); g.moveTo(14, 14); g.lineTo(50, 50); g.moveTo(50, 14); g.lineTo(14, 50); g.stroke(); const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true })); sp.visible = false; sp.renderOrder = 10; return sp })()
+scene.add(missMark); let missT = 0
 const aimMark = new THREE.Group()
 {
   const ring = new THREE.Mesh(new THREE.RingGeometry(0.7, 0.95, 28), new THREE.MeshBasicMaterial({ color: 0xff7a1a, transparent: true, opacity: 0.95, depthTest: false, side: THREE.DoubleSide }))
@@ -1658,6 +1663,7 @@ function updateRunnerFx(dt, now) {
   for (let i = ri; i < ropePool.length; i++) ropePool[i].visible = false
   // 狙い: 自分が操作していて、ワイヤーを出していないときだけ
   aimT -= dt
+  if (missT > 0) { missT -= dt; if (missT <= 0) missMark.visible = false }
   if (me && me.isRunner && mode === 'race' && race.phase !== 'done' && !me.rope && me.wreck <= 0 && !(me.net > 0)) {
     if (aimT <= 0) { aimT = 0.08; aimPt = findAnchor(world, me) }
     aimMark.visible = !!aimPt
@@ -1710,7 +1716,7 @@ function runnerEvent(c, ev, mine, vol) {
       return true
     case 'zip': if (vol) audio.zip(); if (mine) fx.addShake(0.3); return true
     case 'zipNo': if (mine) hud.toast(t('msgZipNo')); return true
-    case 'wireMiss': if (mine) { hud.toast(t('msgWireMiss')); audio.miss() } return true
+    case 'wireMiss': if (mine) { hud.toast(t('msgWireMiss')); audio.miss(); if (ev.far) { missMark.position.set(ev.x, ev.y, ev.z); missMark.scale.setScalar(Math.max(1.5, camera.position.distanceTo(missMark.position) * 0.05)); missMark.visible = true; missT = 0.8 } } return true
     case 'jump': return true
     case 'climb': if (mine) audio.tick(); return true
     case 'vault': if (mine) audio.tick(); return true

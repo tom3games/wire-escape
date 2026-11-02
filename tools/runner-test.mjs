@@ -30,10 +30,18 @@ ok('6秒間ワイヤーを掛け続けて進める', wires >= 3 && Math.hypot(r.
 r = createRunner({ id: 'me', spawn: sp })
 run(r, 1, () => ({ throttle: 1 }))
 run(r, 0.1, () => ({ throttle: 1, wire: true }))
-const y0 = r.y
-evs = run(r, 5, (t, rr) => ({ throttle: 1, boost: true })) // 巻き取りは押している間ずっと
-let peak = r.y
-ok('巻き取りで上へ飛ぶ', evs.some(e => e.t === 'zip') && evs.some(e => e.zip), `events=${[...new Set(evs.map(e => e.t))].join(',')}`)
+// 巻き取りのボタンは無い（2026-11-02）。boost を押しても引き寄せない。振り子の下では自動で少しずつ縮む
+const len0 = r.rope ? r.rope.len : 0
+let maxPull = 0, minLen = 1e9
+evs = run(r, 1.2, (t, rr) => { if (rr.rope) { minLen = Math.min(minLen, rr.rope.len); const d = Math.hypot(rr.rope.x - rr.x, rr.rope.z - rr.z) || 1; maxPull = Math.max(maxPull, (rr.vx * (rr.rope.x - rr.x) + rr.vz * (rr.rope.z - rr.z)) / d) } return { throttle: 1, boost: true } })
+ok('巻き取りボタンは効かない（zip が出ない）', !evs.some(e => e.t === 'zip' || e.zip), `events=${[...new Set(evs.map(e => e.t))].join(',')}`)
+ok('自動の巻き取りで少しずつ縮む（1.2秒で 0.5〜15m）', len0 > 0 && len0 - minLen > 0.5 && len0 - minLen < 15, `len ${len0.toFixed(1)}→${minLen.toFixed(1)}`)
+// 遠すぎる所を押したら × （wireMiss far）か、その向きで届く所に掛かる。届く距離より遠くには掛からない
+r = createRunner({ id: 'me', spawn: sp })
+run(r, 0.5, () => ({ throttle: 1 }))
+evs = run(r, 0.1, () => ({ throttle: 1, wire: true, wireAt: { x: r.x + 300, y: 60, z: r.z + 300 } }))
+const wv = evs.find(e => e.t === 'wire'), wm = evs.find(e => e.t === 'wireMiss')
+ok('遠すぎる所: 届く範囲で掛かるか × になる', (wv && Math.hypot(wv.x - r.x, wv.z - r.z) <= RUN.wireRange + 2) || (wm && wm.far), JSON.stringify(wv || wm))
 // 壁を登る: 建物の壁へ向かって走る
 const b = world.colliders.find(o => o.kind === 'building' && o.y1 > 20 && o.y1 < 45 && Math.abs(o.cx) < 300 && o.cz > 200)
 const wx = b.cx, wz = b.cz - b.hl - 6
@@ -41,6 +49,27 @@ r = createRunner({ id: 'me', spawn: { x: wx, z: wz, yaw: 0, y: 0 } })
 let climbed = false
 evs = run(r, 8, (t, rr) => { if (rr.onRoof) climbed = true; return { throttle: 1 } })
 ok('壁を駆け上がって屋上に乗る', climbed && Math.abs(r.y - b.y1) < 0.3, `高さ${b.y1.toFixed(1)}m 今y=${r.y.toFixed(1)} events=${[...new Set(evs.map(e => e.t))].join(',')}`)
+// 壁に張り付いて這う: 登り始めてから、止まる（落ちない）・右・左・下へ動ける・跳ぶと離れる
+r = createRunner({ id: 'me', spawn: { x: wx, z: wz, yaw: 0, y: 0 } })
+run(r, 1.2, () => ({ throttle: 1 }))
+const c0 = !!r.climbing, y0c = r.y
+run(r, 1, () => ({}))
+const hang = !!r.climbing && Math.abs(r.y - y0c) < 0.5
+const xa = r.x, za = r.z
+run(r, 0.8, () => ({ wallX: 1 }))
+const right = Math.hypot(r.x - xa, r.z - za)
+const xb = r.x, zb = r.z
+run(r, 0.8, () => ({ wallX: -1 }))
+const left = Math.hypot(r.x - xb, r.z - zb)
+const yd0 = r.y
+run(r, 0.5, () => ({ wallY: -1 }))
+const down = yd0 - r.y
+const yu0 = r.y
+run(r, 0.4, () => ({ wallY: 1 }))
+const up = r.y - yu0
+const stillOn = !!r.climbing
+run(r, 0.1, () => ({ jump: true }))
+ok('壁に張り付いて止まれる・左右上下に這える・跳ぶと離れる', c0 && hang && right > 2 && left > 2 && down > 1.5 && up > 1.5 && stillOn && !r.climbing, JSON.stringify({ c0, hang, right: +right.toFixed(1), left: +left.toFixed(1), down: +down.toFixed(1), up: +up.toFixed(1), off: !r.climbing }))
 // 屋上から飛び降りて着地（落下で壊れない）
 // 運河: 南北の運河へ走り込む
 const cz = world.nav.canal.z0 - 30

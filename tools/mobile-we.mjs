@@ -1,6 +1,7 @@
-// iPhone 相当（webkit・タッチ）で 6 サイズ: タイトルが一画面、タッチのボタンで 走る→ワイヤー→巻き取り、
+// iPhone 相当（webkit・タッチ）で 6 サイズ: タイトルが一画面、タッチのボタンで 走る→ワイヤー（巻き取りは無し）、
 // ボタンと表示がはみ出さず重ならない、エラー0。拡大止めも確かめる
 import { webkit } from 'playwright'
+import { muteContext } from './mute.mjs'
 import { serveStatic } from './static.mjs'
 import { mkdir } from 'node:fs/promises'
 const OUT = new URL('../shots/mobile/', import.meta.url).pathname
@@ -14,6 +15,7 @@ for (const [w, h] of sizes) {
   const b = await webkit.launch()
   const touchDev = w < 1000
   const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, hasTouch: touchDev, userAgent: touchDev ? UA : undefined, locale: 'ja-JP' })
+  await muteContext(ctx)
   const p = await ctx.newPage()
   const errs = []
   p.on('pageerror', e => errs.push(e.message))
@@ -93,16 +95,13 @@ for (const [w, h] of sizes) {
     }
     ok(roped, tag + ' ワイヤーボタンで掛かる', miss.join(' / '))
     await p.screenshot({ path: OUT + tag + '-swing.png' })
-    // ワイヤーの方へスティックを倒すと巻き取り（カメラから見たワイヤーの向きへ）
-    const dir = await p.evaluate(() => { const m = window.__btr.me, B = window.__btr; if (!m.rope) return null; const cam = B.camera; const fx = Math.sin(m.yaw), fz = Math.cos(m.yaw); const a = Math.atan2(m.rope.x - m.x, m.rope.z - m.z); return a })
-    let zipped = false
-    if (dir != null) {
-      const rel = await p.evaluate(a => { const hd = window.__btr.camHd; return -(a - hd) }, dir)
-      await stick('pointerdown', 0, 0); await stick('pointermove', Math.sin(rel) * 60, -Math.cos(rel) * 60)
-      for (let i = 0; i < 6 && !zipped; i++) { await p.waitForTimeout(60); zipped = await p.evaluate(() => window.__btr.me.zipping) }
-      await stick('pointerup', 0, 0)
-    }
-    ok(zipped, tag + ' ワイヤーの方へスティックを倒すと巻き取る')
+    // 巻き取りは無くした（2026-11-02 本人「巻き取りボタンいらん」）: ボタンが見えず、スティックをワイヤーの方へ倒しても引き寄せない
+    const noReel = await p.evaluate(() => { const b = document.querySelector('[data-k=boost]'); return !b || !b.offsetParent })
+    await stick('pointerdown', 0, 0); await stick('pointermove', 0, -60); await p.waitForTimeout(300)
+    const zipped = await p.evaluate(() => window.__btr.me.zipping); await stick('pointerup', 0, 0)
+    ok(noReel && !zipped, tag + ' 巻き取りボタンが無く、スティックで巻き取らない')
+    const snd = await p.evaluate(() => ({ calls: Object.keys(window.__sfxCalls || {}).length, mute: window.__muteOk ? window.__muteOk() : null }))
+    ok(snd.calls > 0 && snd.mute === true, tag + ' 録音の音が呼ばれ、テスト中は無音', JSON.stringify(snd))
     await press('[data-k=jump]', 'pointerdown'); await p.waitForTimeout(60); await press('[data-k=jump]', 'pointerup')
     const lay = await p.evaluate(() => {
       const rs = ['#stickBase', '[data-k=jump]', '[data-k=wire]', '[data-k=sneak]', '[data-k=pause]', '[data-k=cam]', '[data-k=respawn]', '#miniMap', '.hud-br', '.hud-tl', '.hud-top', '.hud-bl'].map(s => [s, document.querySelector(s).getBoundingClientRect()])

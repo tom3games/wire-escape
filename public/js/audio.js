@@ -1,10 +1,40 @@
-// 音はすべてその場で合成する（音声ファイルなし）。最初のクリックで有効になる。
+// 音は録音素材（public/snd、出所は public/CREDITS.md）。2026-11-02 合成音から置き換え（「AI特有のSE」対策）。
+// 鳴らした回数は window.__sfxCalls（テストの mute.mjs が __soundCalls を数値で使うので名前を分けた）
+// 合成で鳴らすのは風切りとタイヤの鳴き（ノイズを絞ったもの）だけ。関数名は前と同じなので main.js はそのまま
+const F = n => 'snd/' + n + '.mp3'
+const B = '75-cc0-breaking-falling-hit-sfx_sfx_breaking_and_falling_bfh1_', IF = 'interface-sounds_kenney_interfaceSounds_Audio_', RPG = '50-rpg-sound-effects_RPGsounds_Kenney_OGG_'
+const S = {
+  whip: ['swishes-sound-pack_swishes_swishes_swish-1', 'swishes-sound-pack_swishes_swishes_swish-2', 'swishes-sound-pack_swishes_swishes_swish-3'],
+  hook: [RPG + 'metalClick'],
+  miss: [IF + 'error_004'], ui: [IF + 'click_001'], tick: [IF + 'tick_001'], lockon: [IF + 'select_002'], beep: [IF + 'bong_001'], warn: [IF + 'confirmation_002'],
+  thwack: ['thwack-sounds_thwack-1.0_PCM_thwack-04', 'thwack-sounds_thwack-1.0_PCM_thwack-07'],
+  cloth: [RPG + 'cloth1', RPG + 'cloth2'],
+  rumble: [B + 'rock_falling_02'], rubble: [B + 'rock_breaking_01', B + 'rock_breaking_02'],
+  hit: [B + 'hit_01', B + 'hit_03', B + 'hit_05'], metal: [B + 'metal_hit_01', B + 'metal_hit_03', B + 'metal_hit_05'],
+  wood: [B + 'wood_hit_01', B + 'wood_breaking_02'], glass: [B + 'glass_breaking_01', B + 'glass_breaking_03'],
+  step: ['100-cc0-sfx-2_sfx_100_v2_sfx100v2_footstep_01', '100-cc0-sfx-2_sfx_100_v2_sfx100v2_footstep_02'],
+  air: ['100-cc0-sfx-2_sfx_100_v2_sfx100v2_air_01', '100-cc0-sfx-2_sfx_100_v2_sfx100v2_air_02'],
+  shot: ['100-cc0-sfx_100-CC0-SFX_0_shot_01', '100-cc0-sfx_100-CC0-SFX_0_shot_02'], boom: ['100-cc0-sfx_100-CC0-SFX_0_explosion'],
+  splash: ['40-cc0-water-splash-slime-sfx_water-splash-slime-sfx_splash_05', '40-cc0-water-splash-slime-sfx_water-splash-slime-sfx_splash_12'],
+  grunt: ['little-grunts_sliced_grunt_01', 'little-grunts_sliced_grunt_02', 'little-grunts_sliced_grunt_03'],
+  scream: ['female-high-pitched-scream-sfx_scream_02', 'female-high-pitched-scream-sfx_scream_03', 'female-scream-1_female_scream_1'],
+  radio: ['frequency-static-sound-effects_static4'],
+  whistle: ['squeak-toy-sounds_squeak_toy_squeak_toy_squeak_toy_-_squeak1'],
+  bell: ['bell-dingschimes_bell_ding2'],
+  fanfare: ['85-short-music-jingles_jingleSounds_Kenney_OGG_jingles_SAX_jingles_SAX03'],
+  whoosh: ['air-whoosh_whoosh2_0'],
+  siren: ['sirens-and-alarm-noise_siren_0'], rotor: ['helicopter-sounds_helicopter_0'], engine: ['racing-car-engine-sound-loops_loop_0'],
+  bgm: ['music_catch-me-if-you-can_dominoespizzaakacatchme_0']
+}
+
 export class Audio {
   constructor() {
     this.ctx = null
     this.muted = false
     try { this.muted = localStorage.getItem('we-mute') === '1' } catch {}
     this.bgmOn = true
+    this.bufs = {}; this.last = {}; this.loops = {}
+    window.__sfxCalls = window.__sfxCalls || {}
   }
 
   start() {
@@ -16,32 +46,24 @@ export class Audio {
     const comp = ctx.createDynamicsCompressor()
     this.master.connect(comp).connect(ctx.destination)
     this.sfx = ctx.createGain(); this.sfx.gain.value = 0.9; this.sfx.connect(this.master)
-    this.music = ctx.createGain(); this.music.gain.value = 0.22; this.music.connect(this.master)
-    // 雑音の元
+    this.music = ctx.createGain(); this.music.gain.value = 0.32; this.music.connect(this.master)
+    // 風切りとタイヤの鳴きだけはノイズを絞って作る（速さで音が変わるので録音より合う）
     const len = ctx.sampleRate * 2
     this.noiseBuf = ctx.createBuffer(1, len, ctx.sampleRate)
     const d = this.noiseBuf.getChannelData(0)
     for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1
-
-    // エンジン: のこぎり波2本＋矩形波をローパス
-    this.eng = ctx.createGain(); this.eng.gain.value = 0
-    this.engF = ctx.createBiquadFilter(); this.engF.type = 'lowpass'; this.engF.frequency.value = 600; this.engF.Q.value = 3
-    this.engF.connect(this.eng).connect(this.sfx)
-    this.osc = []
-    for (const [type, mul, g] of [['sawtooth', 1, 0.5], ['sawtooth', 1.007, 0.35], ['square', 0.5, 0.25]]) {
-      const o = ctx.createOscillator(); o.type = type
-      const og = ctx.createGain(); og.gain.value = g
-      o.connect(og).connect(this.engF); o.start()
-      this.osc.push({ o, mul })
-    }
-    // タイヤの鳴き
-    this.screech = this._loopNoise('bandpass', 1700, 6)
-    // ブーストの噴射音
-    this.jet = this._loopNoise('bandpass', 900, 0.8)
-    // 風切り
     this.wind = this._loopNoise('lowpass', 500, 0.5)
-    this.beatT = 0
-    this.step16 = 0
+    this.screech = this._loopNoise('bandpass', 1700, 6)
+    this._load()
+  }
+
+  _load() {
+    for (const k in S) for (const n of S[k]) {
+      const u = F(n); if (this.bufs[u]) continue
+      this.bufs[u] = 'loading'
+      // 古い Safari はコールバック形の decodeAudioData しか無い
+      fetch(u).then(r => r.arrayBuffer()).then(ab => new Promise((ok, ng) => this.ctx.decodeAudioData(ab, ok, ng))).then(b => { this.bufs[u] = b }).catch(() => { delete this.bufs[u] })
+    }
   }
 
   _loopNoise(type, freq, q) {
@@ -52,31 +74,49 @@ export class Audio {
     return { g, f }
   }
 
+  // 素材を1回鳴らす。差分からランダム（同じのは続けない）、高さを少し揺らす
+  _play(key, { vol = 1, rate = 1, jitter = 0.06, when = 0 } = {}) {
+    window.__sfxCalls[key] = (window.__sfxCalls[key] || 0) + 1
+    if (!this.ctx) return null
+    const list = S[key]; let n = list[0]
+    if (list.length > 1) { do { n = list[Math.floor(Math.random() * list.length)] } while (n === this.last[key]); this.last[key] = n }
+    const buf = this.bufs[F(n)]; if (!buf || buf === 'loading') return null
+    const s = this.ctx.createBufferSource(), g = this.ctx.createGain()
+    s.buffer = buf; s.playbackRate.value = rate * (1 + (Math.random() * 2 - 1) * jitter)
+    g.gain.value = vol
+    s.connect(g).connect(this.sfx); s.start(this.ctx.currentTime + when)
+    return s
+  }
+  // ずっと鳴る音（サイレン・ヘリ・エンジン・BGM）。vol 0 で静かにする
+  _loop(key, vol, dest, rate = 1) {
+    if (!this.ctx) return
+    let L = this.loops[key]
+    if (!L) {
+      if (vol <= 0.001) return
+      const buf = this.bufs[F(S[key][0])]; if (!buf || buf === 'loading') return
+      const s = this.ctx.createBufferSource(), g = this.ctx.createGain()
+      s.buffer = buf; s.loop = true; g.gain.value = 0
+      s.connect(g).connect(dest || this.sfx); s.start(0, Math.random() * buf.duration * 0.5)
+      L = this.loops[key] = { s, g }
+      window.__sfxCalls['loop:' + key] = (window.__sfxCalls['loop:' + key] || 0) + 1
+    }
+    const t = this.ctx.currentTime
+    L.g.gain.setTargetAtTime(Math.max(0, vol), t, 0.2)
+    L.s.playbackRate.setTargetAtTime(rate, t, 0.1)
+  }
+
   setMuted(m) {
     this.muted = m
     try { localStorage.setItem('we-mute', m ? '1' : '0') } catch {}
     if (this.master) this.master.gain.setTargetAtTime(m ? 0 : 0.8, this.ctx.currentTime, 0.05)
   }
 
-  // 毎フレーム: 車の状態から連続音を動かす
+  // 車（オンラインの車モード）: エンジンの録音を速さで高くする
   drive({ speed = 0, top = 46, throttle = 0, slip = 0, boosting = false, grounded = true, engineHealth = 1, active = true }) {
     if (!this.ctx) return
-    const t = this.ctx.currentTime
-    const r = Math.min(1.4, speed / top)
-    // 疑似ギア: 速度帯ごとに回転数が上がって落ちる
-    const gears = [0, 0.18, 0.36, 0.56, 0.78, 1.0, 1.5]
-    let gi = 0; while (gi < gears.length - 2 && r > gears[gi + 1]) gi++
-    const within = (r - gears[gi]) / (gears[gi + 1] - gears[gi])
-    const rpm = 0.35 + within * 0.65
-    const base = 48 + rpm * 120 + gi * 8 + (boosting ? 40 : 0)
-    // 壊れたエンジンはがたつく
-    const rough = (1 - engineHealth) * (Math.random() * 18)
-    for (const { o, mul } of this.osc) o.frequency.setTargetAtTime((base + rough) * mul, t, 0.03)
-    this.engF.frequency.setTargetAtTime(400 + throttle * 1400 + rpm * 600, t, 0.05)
-    this.eng.gain.setTargetAtTime(active ? 0.1 + throttle * 0.12 + Math.min(0.08, r * 0.07) + (boosting ? 0.05 : 0) : 0, t, 0.08)
+    const t = this.ctx.currentTime, r = Math.min(1.4, speed / top)
+    this._loop('engine', active ? 0.12 + throttle * 0.12 + (boosting ? 0.05 : 0) : 0, null, 0.7 + r * 0.9 + (1 - engineHealth) * (Math.random() * 0.1))
     this.screech.g.gain.setTargetAtTime(active && grounded && slip > 4 ? Math.min(0.22, (slip - 4) * 0.02) : 0, t, 0.06)
-    this.jet.g.gain.setTargetAtTime(active && boosting ? 0.32 : 0, t, 0.05)
-    this.jet.f.frequency.setTargetAtTime(700 + r * 600, t, 0.1)
     this.wind.g.gain.setTargetAtTime(active ? Math.min(0.25, r * r * 0.22) + (grounded ? 0 : 0.08) : 0, t, 0.2)
   }
 
@@ -90,203 +130,42 @@ export class Audio {
     this.wind.f.frequency.setTargetAtTime(350 + r * 900, t, 0.15)
   }
   // ワイヤーを撃つ（ヒュッ＋ガチッ）
-  whip() { this._burst({ freq: 3200, type: 'bandpass', q: 2, dur: 0.12, gain: 0.3, decay: 0.11 }); this._tone({ freq: 1400, to: 420, dur: 0.1, gain: 0.08, type: 'triangle' }); this._tone({ freq: 240, to: 160, dur: 0.06, gain: 0.18, type: 'square', when: 0.08 }) }
-  zip() { this._tone({ freq: 300, to: 1200, dur: 0.4, gain: 0.1, type: 'sawtooth' }); this._burst({ freq: 1800, type: 'bandpass', q: 1, dur: 0.45, gain: 0.25, decay: 0.4 }) }
-  miss() { this._tone({ freq: 220, to: 140, dur: 0.12, gain: 0.12, type: 'square' }) }
-  netPop() { this._burst({ freq: 700, type: 'bandpass', q: 1.2, dur: 0.18, gain: 0.35, decay: 0.16 }); this._tone({ freq: 160, to: 90, dur: 0.12, gain: 0.25 }) }
-  netWrap() { for (let i = 0; i < 4; i++) this._tone({ freq: 500 - i * 60, to: 300 - i * 40, dur: 0.07, gain: 0.08, type: 'triangle', when: i * 0.05 }) }
-  rumble() { this._tone({ freq: 70, to: 35, dur: 0.6, gain: 0.5 }); this._burst({ freq: 300, dur: 0.6, gain: 0.35, decay: 0.55 }) }
-  warn() { for (let i = 0; i < 2; i++) this._tone({ freq: 980, to: 980, dur: 0.08, gain: 0.07, type: 'square', when: i * 0.14 }) }
-  tick() { this._tone({ freq: 1200, to: 900, dur: 0.04, gain: 0.05, type: 'square' }) }
-  splash() { this._burst({ freq: 1200, dur: 0.6, gain: 0.5, decay: 0.55 }) }
-  // 通行人の叫び（高い声の上がり下がり）
-  // 情けない裏声の「きゃー！」: 高く上がって、ふるえながら落ちる（毎回少し高さを変える）
-  scream(v = 1) {
-    if (!this.ctx) return
-    const ctx = this.ctx, t = ctx.currentTime, p = 0.85 + Math.random() * 0.4
-    const o = ctx.createOscillator(); o.type = 'sawtooth'
-    o.frequency.setValueAtTime(700 * p, t)
-    o.frequency.exponentialRampToValueAtTime(1500 * p, t + 0.12)
-    o.frequency.setValueAtTime(1500 * p, t + 0.3)
-    o.frequency.exponentialRampToValueAtTime(820 * p, t + 0.95)
-    // ふるえ（ビブラート）
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 11 + Math.random() * 4
-    const lg = ctx.createGain(); lg.gain.value = 70 * p
-    lfo.connect(lg).connect(o.frequency)
-    // 「あ」「い」の間の口の形（2つの山）
-    const f1 = ctx.createBiquadFilter(); f1.type = 'bandpass'; f1.frequency.value = 1100; f1.Q.value = 4
-    const f2 = ctx.createBiquadFilter(); f2.type = 'bandpass'; f2.frequency.value = 2700; f2.Q.value = 5
-    const g = ctx.createGain()
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.32 * v, t + 0.05)
-    g.gain.setValueAtTime(0.32 * v, t + 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.0)
-    o.connect(f1).connect(g); o.connect(f2).connect(g); g.connect(this.sfx)
-    o.start(t); lfo.start(t); o.stop(t + 1.05); lfo.stop(t + 1.05)
-  }
-  // 情けない声の一発（「ぐえっ」「あいたた」など、下がる短い声）
-  grunt(v = 1, high = false) { this._tone({ freq: high ? 520 : 260, to: high ? 300 : 120, dur: 0.22, gain: 0.2 * v, type: 'square' }); this._burst({ freq: high ? 1800 : 900, type: 'bandpass', q: 3, dur: 0.15, gain: 0.12 * v, decay: 0.14 }) }
-  whistle(v = 1) { for (let i = 0; i < 2; i++) this._tone({ freq: 2600, to: 2500, dur: 0.16, gain: 0.07 * v, type: 'sine', when: i * 0.22 }) }
-  stomp() { this._tone({ freq: 120, to: 40, dur: 0.35, gain: 0.8 }); this.crash(1.3) }
-
-  // 一発音
-  _burst({ freq = 800, type = 'lowpass', q = 1, dur = 0.3, gain = 0.6, decay = 0.25 }) {
-    if (!this.ctx) return
-    const t = this.ctx.currentTime
-    const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuf
-    src.playbackRate.value = 0.8 + Math.random() * 0.4
-    const f = this.ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq; f.Q.value = q
-    const g = this.ctx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.001, t + decay)
-    src.connect(f).connect(g).connect(this.sfx)
-    src.start(t, Math.random() * 1.5, dur)
-  }
-  _tone({ freq = 80, to = 40, dur = 0.3, gain = 0.6, type = 'sine', when = 0 }) {
-    if (!this.ctx) return
-    const t = this.ctx.currentTime + when
-    const o = this.ctx.createOscillator(); o.type = type
-    o.frequency.setValueAtTime(freq, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, to), t + dur)
-    const g = this.ctx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur)
-    o.connect(g).connect(this.sfx); o.start(t); o.stop(t + dur + 0.05)
-  }
-
-  crash(power = 1) {
-    const p = Math.min(1.5, power)
-    this._burst({ freq: 1200, dur: 0.5, gain: 0.5 * p, decay: 0.45 })
-    this._burst({ freq: 3500, type: 'highpass', dur: 0.25, gain: 0.25 * p, decay: 0.2 })
-    this._tone({ freq: 120, to: 35, dur: 0.35, gain: 0.7 * p })
-    // 金属の鳴り
-    for (const f of [430, 610, 890]) this._tone({ freq: f * (0.9 + Math.random() * 0.2), to: f * 0.8, dur: 0.4, gain: 0.05 * p, type: 'triangle' })
-  }
-  // ガラスが割れる: 高い音の粒をばらばらに
-  glass(power = 1) {
-    for (let i = 0; i < 7; i++) setTimeout(() => {
-      this._burst({ freq: 4500 + Math.random() * 3500, type: 'bandpass', q: 6, dur: 0.06, gain: 0.22 * power, decay: 0.06 })
-      this._tone({ freq: 2400 + Math.random() * 2600, to: 1800, dur: 0.12, gain: 0.03 * power, type: 'triangle' })
-    }, i * 18 + Math.random() * 20)
-  }
-  scrape() { this._burst({ freq: 2600, type: 'bandpass', q: 3, dur: 0.15, gain: 0.12, decay: 0.12 }) }
-  wood(power = 1) {
-    for (let i = 0; i < 3; i++) setTimeout(() => this._burst({ freq: 1800 + Math.random() * 1500, type: 'bandpass', q: 2, dur: 0.08, gain: 0.35 * power, decay: 0.08 }), i * 35)
-    this._tone({ freq: 220, to: 90, dur: 0.15, gain: 0.25 * power, type: 'triangle' })
-  }
-  metal(power = 1) {
-    for (const f of [520, 780, 1230]) this._tone({ freq: f, to: f * 0.93, dur: 0.6, gain: 0.09 * power, type: 'triangle' })
-    this._burst({ freq: 2000, type: 'bandpass', q: 1.5, dur: 0.2, gain: 0.25 * power, decay: 0.2 })
-  }
-  rubble(power = 1) {
-    this._burst({ freq: 400, dur: 1.2, gain: 0.7 * power, decay: 1.1 })
-    this._tone({ freq: 70, to: 28, dur: 0.8, gain: 0.8 * power })
-    for (let i = 0; i < 6; i++) setTimeout(() => this._burst({ freq: 900, dur: 0.1, gain: 0.2, decay: 0.1 }), 80 + i * 70)
-  }
-  land(power = 1) { this._tone({ freq: 90, to: 40, dur: 0.25, gain: Math.min(0.9, 0.3 + power * 0.04) }); this._burst({ freq: 500, dur: 0.2, gain: 0.25, decay: 0.2 }) }
-  boostStart() { this._burst({ freq: 600, type: 'bandpass', q: 0.7, dur: 0.5, gain: 0.4, decay: 0.45 }); this._tone({ freq: 180, to: 520, dur: 0.35, gain: 0.12, type: 'sawtooth' }) }
-  // サイレン（ピーポー: 770Hz と 960Hz を 0.65 秒ずつ）。vol 0..1
-  siren(vol) {
-    if (!this.ctx) return
-    const ctx = this.ctx, t = ctx.currentTime
-    if (!this.sir) {
-      if (vol <= 0) return
-      const o = ctx.createOscillator(); o.type = 'triangle'; o.frequency.value = 865
-      const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 0.77
-      const lg = ctx.createGain(); lg.gain.value = 95
-      lfo.connect(lg).connect(o.frequency)
-      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 0.8
-      const g = ctx.createGain(); g.gain.value = 0
-      o.connect(f).connect(g).connect(this.sfx); o.start(); lfo.start()
-      this.sir = { g }
-    }
-    this.sir.g.gain.setTargetAtTime(Math.max(0, Math.min(1, vol)) * 0.11, t, 0.2)
-  }
-  // ヘリのローター（低いバタバタ）。vol 0..1
-  rotor(vol) {
-    if (!this.ctx) return
-    const ctx = this.ctx, t = ctx.currentTime
-    if (!this.rot) {
-      if (vol <= 0) return
-      const src = ctx.createBufferSource(); src.buffer = this.noiseBuf; src.loop = true
-      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 180
-      const am = ctx.createGain(); am.gain.value = 0.5
-      const lfo = ctx.createOscillator(); lfo.type = 'square'; lfo.frequency.value = 11
-      const lg = ctx.createGain(); lg.gain.value = 0.5
-      lfo.connect(lg).connect(am.gain)
-      const g = ctx.createGain(); g.gain.value = 0
-      src.connect(f).connect(am).connect(g).connect(this.sfx); src.start(); lfo.start()
-      this.rot = { g }
-    }
-    this.rot.g.gain.setTargetAtTime(Math.max(0, Math.min(1, vol)) * 0.5, t, 0.3)
-  }
-  // ロックオンの警告音（ピピッ）
-  lockon() { for (let i = 0; i < 3; i++) this._tone({ freq: 1800, to: 1800, dur: 0.05, gain: 0.08, type: 'square', when: i * 0.09 }) }
-  // 拳銃の発砲音（乾いた破裂音）
-  gunshot(power = 1) {
-    this._burst({ freq: 2400, type: 'highpass', dur: 0.09, gain: 0.5 * power, decay: 0.08 })
-    this._burst({ freq: 900, dur: 0.18, gain: 0.35 * power, decay: 0.16 })
-    this._tone({ freq: 160, to: 60, dur: 0.1, gain: 0.35 * power })
-  }
-  // パンク（破裂音と空気が抜ける音）
-  puncture() {
-    this._burst({ freq: 1800, type: 'highpass', dur: 0.12, gain: 0.6, decay: 0.1 })
-    this._burst({ freq: 3000, type: 'bandpass', q: 0.6, dur: 0.9, gain: 0.25, decay: 0.85 })
-    this._tone({ freq: 140, to: 50, dur: 0.18, gain: 0.5 })
-  }
-  // 自分の車に弾が当たった（金属に跳ねる音）
-  ricochet() {
-    this._tone({ freq: 3200, to: 1400, dur: 0.16, gain: 0.08, type: 'triangle' })
-    this._burst({ freq: 5000, type: 'bandpass', q: 4, dur: 0.05, gain: 0.25, decay: 0.05 })
-  }
-  // 着弾の爆発
-  explosion(power = 1) {
-    this._burst({ freq: 700, dur: 1.4, gain: 0.9 * power, decay: 1.3 })
-    this._tone({ freq: 90, to: 25, dur: 1.0, gain: 1.0 * power })
-    this._burst({ freq: 3000, type: 'highpass', dur: 0.3, gain: 0.3 * power, decay: 0.3 })
-  }
-  // 無線の合図（短い2音と雑音）
-  radio() {
-    this._tone({ freq: 1250, to: 1250, dur: 0.06, gain: 0.07, type: 'square' })
-    this._tone({ freq: 1650, to: 1650, dur: 0.07, gain: 0.06, type: 'square', when: 0.08 })
-    this._burst({ freq: 2200, type: 'bandpass', q: 0.8, dur: 0.25, gain: 0.05, decay: 0.22 })
-  }
-  horn() { for (const f of [392, 494]) this._tone({ freq: f, to: f, dur: 0.38, gain: 0.07, type: 'square' }) }
-  beep(high = false) { this._tone({ freq: high ? 1320 : 660, to: high ? 1320 : 660, dur: high ? 0.6 : 0.22, gain: 0.25, type: 'square' }) }
-  cp() { this._tone({ freq: 880, to: 880, dur: 0.1, gain: 0.18, type: 'square' }); this._tone({ freq: 1320, to: 1320, dur: 0.18, gain: 0.18, type: 'square', when: 0.1 }) }
-  ui() { this._tone({ freq: 700, to: 900, dur: 0.06, gain: 0.08, type: 'square' }) }
-  fanfare() { [523, 659, 784, 1046].forEach((f, i) => this._tone({ freq: f, to: f, dur: 0.35, gain: 0.16, type: 'square', when: i * 0.12 })) }
-
-  // BGM: 16分音符の簡単な打ち込み（キック・スネア・ハイハット・ベース・アルペジオ）
-  tickMusic(dt, intensity = 1) {
-    if (!this.ctx || !this.bgmOn) return
-    const bpm = 132
-    const s16 = 60 / bpm / 4
-    this.beatT += dt
-    while (this.beatT >= s16) {
-      this.beatT -= s16
-      const i = this.step16 = (this.step16 + 1) % 64
-      const t = this.ctx.currentTime + 0.02
-      const bar = Math.floor(i / 16)
-      const roots = [41.2, 41.2, 49, 36.7]
-      const root = roots[bar]
-      const n = i % 16
-      if (n % 4 === 0) this._mTone(t, 110, 38, 0.18, 0.9, 'sine')            // キック
-      if (n === 4 || n === 12) this._mNoise(t, 1800, 0.14, 0.5)             // スネア
-      if (n % 2 === 1) this._mNoise(t, 8000, 0.03, 0.18 * intensity, 'highpass') // ハイハット
-      if ([0, 3, 6, 8, 10, 14].includes(n)) this._mTone(t, root * 2, root * 2, 0.12, 0.45, 'sawtooth', 300)
-      if (intensity > 0.5 && n % 2 === 0) {
-        const arp = [4, 7, 12, 7][(n / 2) % 4]
-        const f = root * 4 * Math.pow(2, arp / 12)
-        this._mTone(t, f, f, 0.08, 0.12, 'square', 2200)
-      }
-    }
-  }
-  _mTone(t, f0, f1, dur, gain, type, lp = 0) {
-    const o = this.ctx.createOscillator(); o.type = type
-    o.frequency.setValueAtTime(f0, t); o.frequency.exponentialRampToValueAtTime(Math.max(20, f1), t + dur)
-    const g = this.ctx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur)
-    let node = o
-    if (lp) { const f = this.ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = lp; o.connect(f); node = f }
-    node.connect(g).connect(this.music); o.start(t); o.stop(t + dur + 0.02)
-  }
-  _mNoise(t, freq, dur, gain, type = 'bandpass') {
-    const src = this.ctx.createBufferSource(); src.buffer = this.noiseBuf
-    const f = this.ctx.createBiquadFilter(); f.type = type; f.frequency.value = freq
-    const g = this.ctx.createGain(); g.gain.setValueAtTime(gain, t); g.gain.exponentialRampToValueAtTime(0.001, t + dur)
-    src.connect(f).connect(g).connect(this.music); src.start(t, Math.random(), dur + 0.02)
-  }
+  whip() { this._play('whip', { vol: 0.8 }); this._play('hook', { vol: 0.6, when: 0.07 }) }
+  zip() { this._play('whoosh', { vol: 0.6 }) }
+  miss() { this._play('miss', { vol: 0.5 }) }
+  netPop() { this._play('thwack', { vol: 0.7, rate: 0.8 }) }
+  netWrap() { this._play('cloth', { vol: 0.9 }) }
+  rumble() { this._play('rumble', { vol: 1, rate: 0.8 }) }
+  warn() { this._play('warn', { vol: 0.5 }) }
+  tick() { this._play('tick', { vol: 0.4 }) }
+  splash() { this._play('splash', { vol: 1 }) }
+  // 情けない裏声の「きゃー！」（毎回少し高さを変える）
+  scream(v = 1) { this._play('scream', { vol: 0.75 * v, rate: 1.05, jitter: 0.12 }) }
+  // 情けない声の一発（「ぐえっ」「あいたた」）
+  grunt(v = 1, high = false) { this._play('grunt', { vol: 0.9 * v, rate: high ? 1.35 : 1, jitter: 0.1 }) }
+  whistle(v = 1) { this._play('whistle', { vol: 0.5 * v, rate: 1.6 }); this._play('whistle', { vol: 0.5 * v, rate: 1.6, when: 0.22 }) }
+  stomp() { this._play('thwack', { vol: 1, rate: 0.7 }); this.crash(1.3) }
+  crash(power = 1) { const p = Math.min(1.5, power); this._play('hit', { vol: 0.7 * p, rate: 1.1 - p * 0.15 }); this._play('metal', { vol: 0.35 * p, when: 0.03 }) }
+  glass(power = 1) { this._play('glass', { vol: Math.min(1, 0.4 + power * 0.3) }) }
+  scrape() { this._play('metal', { vol: 0.25, rate: 1.4 }) }
+  wood(power = 1) { this._play('wood', { vol: Math.min(1, 0.4 + power * 0.3) }) }
+  metal(power = 1) { this._play('metal', { vol: Math.min(1, 0.35 + power * 0.3) }) }
+  rubble(power = 1) { this._play('rubble', { vol: Math.min(1, 0.4 + power * 0.3) }) }
+  land(power = 1) { this._play('step', { vol: Math.min(1, 0.4 + power * 0.04), rate: 0.85 }); if (power > 10) this._play('hit', { vol: Math.min(0.7, power * 0.03), rate: 0.8 }) }
+  boostStart() { this._play('whoosh', { vol: 0.6 }) }
+  siren(vol) { this._loop('siren', Math.max(0, Math.min(1, vol)) * 0.35) }
+  rotor(vol) { this._loop('rotor', Math.max(0, Math.min(1, vol)) * 0.7) }
+  lockon() { for (let i = 0; i < 3; i++) this._play('lockon', { vol: 0.4, when: i * 0.09, jitter: 0 }) }
+  gunshot(power = 1) { this._play('shot', { vol: Math.min(1, 0.5 + power * 0.3) }) }
+  puncture() { this._play('air', { vol: 0.8 }) }
+  ricochet() { this._play('metal', { vol: 0.4, rate: 1.7 }) }
+  explosion(power = 1) { this._play('boom', { vol: Math.min(1, 0.6 + power * 0.3) }) }
+  radio() { this._play('radio', { vol: 0.25 }) }
+  horn() { this._play('beep', { vol: 0.5, rate: 0.7 }) }
+  beep(high = false) { this._play('beep', { vol: 0.5, rate: high ? 1.5 : 1, jitter: 0 }) }
+  cp() { this._play('bell', { vol: 0.6 }) }
+  ui() { this._play('ui', { vol: 0.5, jitter: 0.03 }) }
+  fanfare() { this._play('fanfare', { vol: 0.8, jitter: 0 }) }
+  // BGM（録音の曲）。逃げている最中は大きく、待ち時間は小さく
+  tickMusic(dt, intensity = 1) { if (this.ctx) this._loop('bgm', this.bgmOn ? 0.35 + intensity * 0.65 : 0, this.music) }
 }

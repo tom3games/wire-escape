@@ -28,7 +28,7 @@ export function runnerBot(ch, e, dt) {
   e.botT = (e.botT || 0) + dt
   if (swing && !r.rope && !r.climbing && (r.grounded || r.vy < 1) && e.botT > 0.25 && !e.botPrev) { inp.wire = true; e.botT = 0 }
   // 掛けたワイヤーで、警察がすぐ下にいたら巻き取りで逃げる
-  if (r.rope && near < 30 && r.zipCd <= 0 && !e.botPrev) inp.boost = true
+  // 巻き取りボタンは無くした（2026-11-02）
   e.botPrev = !!(inp.wire || inp.boost)
   // 曲がり角の手前では向きを先に変える
   if (Math.abs(diff) > 1.2 && r.grounded) inp.throttle = 0.6
