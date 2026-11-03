@@ -42,15 +42,15 @@
 - 山場で一瞬止める＋画面のふちの光（#hitflash）＋揺れ: 警察が見失った 0.12秒・踏みつけ 0.1秒・ネットを抜けた 0.05秒・穴から出た 0.04秒
 - ワイヤー中だけ重力1.07倍・最高速 38→41（逃げる側だけ。警官は 38 のまま）。CPU 128 回で逃げ切り 58%→57%（両方に掛けると 52% に落ちたので警官は外した）
 - 確認: `node tools/wire-juice.mjs [webkit]`（22項目、shots/juice/wire-*）
-- キャッシュバスター: public の js/shared の import と tools/test/lib の import に全部 `?v=N` が付いている。上げる時は `grep -rl "?v=8'" public tools test lib | xargs sed -i '' "s/?v=8'/?v=9'/g"` と index.html の3か所（style.css・modulepreload・main.js）
+- キャッシュバスター: public の js/shared の import と tools/test/lib の import に全部 `?v=N` が付いている。上げる時は `grep -rl "?v=9'" public tools test lib | xargs sed -i '' "s/?v=9'/?v=10'/g"` と index.html の3か所（style.css・modulepreload・main.js）
 
 ## 地面ワイヤー（2026-11-03、?v=8）
 
 - 本人「空中に浮いてる間は地面にもワイヤーつけて加速できるように」「地面をちゃんとタップしなあかん感じに」。共通仕様は claude-config の feedback-wire-game-controls.md「地面ワイヤー」
 - 空中（立っていない・壁に張り付いていない）で、画面の道・屋上をタップした時だけ。ワイヤーボタン・E キー・自動の狙いでは掛からない。建物の当たりが地面の当たりより 6m 以内なら建物（屋上の面は地面扱い）。判定は runner.js の aimTap
-- 胸から点へ groundWireAcc 30 で加速（最高速 41 で止まる）。点から 4m・点を通り過ぎた・足元 1m 以内で下りている・3秒、のどれかで外れて進む向きに +4・上へ 7 以上（跳ねても最高速は超えない）。外れる時は風切りと視野の広がり。つなぎの回数（見失わせ）には数えない
+- 掛けた瞬間に点の向きへ +9m/s（groundWireBoost）、その後 groundWireAcc 48 で加速（最高速 41 で止まる。25m/s まで約0.1〜0.2秒）。点から 4m・点を通り過ぎた・足元 1m 以内で下りている・3秒、のどれかで外れる。足元から 3m より上で外れた時だけ進む向きに +4・上へ 3.5 以上、床の近くで外れた・ロープのまま着地した時は跳ねずにそのまま着地（2026-11-03 本人「あんまり加速できない」「着いてからバウンドするのはおかしい」）。外れる時は風切りと視野の広がり。つなぎの回数（見失わせ）には数えない
 - 犯人だけ。警官（role cop）は掛からない。CPU の警官は狙いの点を使わない。オンラインのサーバー（lib/）は車だけで人の動きを判定しないので、地面ワイヤーは関係しない
-- 確認: `node tools/runner-test.mjs`（地面ワイヤー6項目）、`node tools/groundwire.mjs [webkit]`（実ブラウザでタップ、shots/groundwire/）、`node tools/sim-runner.mjs 48 5 botg`（地面ワイヤーも使う CPU）
+- 確認: `node tools/runner-test.mjs`（地面ワイヤー7項目）、`node tools/groundwire-num.mjs`（25m/s までの秒・最高速・外れた後に上がる高さ）、`node tools/groundwire.mjs [webkit]`（実ブラウザでタップ、shots/groundwire/）、`node tools/sim-runner.mjs 48 5 botg`（地面ワイヤーも使う CPU）
 
 ## ロード画面と音（2026-11-03）
 

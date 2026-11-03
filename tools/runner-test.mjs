@@ -1,7 +1,7 @@
 // 人の動きを描画なしで試す: 走る / 壁を登る / ワイヤーでスイング / 巻き取り / 運河
-import { createWorld } from '../public/shared/track.js?v=8'
-import { createRunner, stepRunner, findAnchor, aimTap, RUN } from '../public/shared/runner.js?v=8'
-import { createNav } from '../public/shared/citynav.js?v=8'
+import { createWorld } from '../public/shared/track.js?v=9'
+import { createRunner, stepRunner, findAnchor, aimTap, RUN } from '../public/shared/runner.js?v=9'
+import { createNav } from '../public/shared/citynav.js?v=9'
 const world = createWorld('city'), nav = createNav(world)
 const dt = 1 / 60
 let fails = 0
@@ -85,20 +85,22 @@ ok('地面ワイヤー: 地面にいる時は掛からない（跳びもしな�
 const airborne = (y = 18, vz = 10) => { const rr = createRunner({ id: 'me', spawn: sp }); Object.assign(rr, { y, vz, grounded: false }); return rr }
 r = airborne()
 const pt = gp(r, 30)
-let maxStep = 0, maxSp = 0, relD = null, steps = 0, v0 = Math.hypot(r.vx, r.vy, r.vz), vPeak = 0
+let maxStep = 0, relY = null, rise = 0, t25 = null, vRope = 0, landUp = 0, landed = false
 evs = []
 for (let i = 0; i < 4 * 60; i++) {
   const x0 = r.x, y0 = r.y, z0 = r.z
   stepRunner(r, { wire: i === 0, wireAt: i === 0 ? pt : null }, dt, world)
   if (i === 0) ok('地面ワイヤー: 空中なら掛かる', !!(r.rope && r.rope.ground), JSON.stringify(r.events.map(e => e.t)))
-  maxStep = Math.max(maxStep, Math.hypot(r.x - x0, r.y - y0, r.z - z0)); maxSp = Math.max(maxSp, Math.hypot(r.vx, r.vy, r.vz))
-  if (r.rope) vPeak = Math.max(vPeak, Math.hypot(r.vx, r.vy, r.vz))
-  for (const e of r.events) { evs.push(e); if (e.t === 'unwire' && e.ground && relD == null) relD = Math.hypot(pt.x - r.x, pt.y - (r.y + 1.2), pt.z - r.z) }
-  r.events.length = 0; steps++
-  if (relD != null) break
+  const v = Math.hypot(r.vx, r.vy, r.vz)
+  if (r.rope) { maxStep = Math.max(maxStep, Math.hypot(r.x - x0, r.y - y0, r.z - z0)); vRope = Math.max(vRope, v); if (t25 == null && v >= 25) t25 = (i + 1) * dt }
+  for (const e of r.events) { evs.push(e); if (e.t === 'unwire' && e.ground && relY == null) relY = r.y }
+  if (relY != null) { rise = Math.max(rise, r.y - relY); if (r.grounded) landed = true; if (landed) landUp = Math.max(landUp, r.vy) }
+  r.events.length = 0
 }
-ok('地面ワイヤー: 点へ加速し、近く（点か地面の直前）で外れて上へ跳ねる', vPeak > v0 + 5 && relD != null && relD < 12 && r.vy >= RUN.groundWireHop - 0.01, `v ${v0.toFixed(1)}→${vPeak.toFixed(1)}m/s 外れた距離${relD && relD.toFixed(1)}m vy=${r.vy.toFixed(1)}`)
-ok('地面ワイヤー: 1ステップで動く距離は最高速×dt 以下（瞬間移動しない）', maxStep <= RUN.maxSpeed * dt + 1e-6, `${maxStep.toFixed(3)}m / ${(RUN.maxSpeed * dt).toFixed(3)}m`)
+// 2026-11-03 本人「地面にワイヤー刺してもあんまり加速できない」「着いてからバウンドしてしまう」
+ok('地面ワイヤー: 0.3秒で 25m/s・掛けている間に 30m/s 以上（最高速は超えない）', t25 != null && t25 <= 0.3 && vRope >= 30 && vRope <= RUN.maxSpeed + 1e-6, `25m/s まで${t25 && t25.toFixed(2)}秒 最高${vRope.toFixed(1)}m/s`)
+ok('地面ワイヤー: 床の近くで外れたら跳ねない（上がる高さ 0.05m 以内）・着地後に上へ動かない', relY != null && rise <= 0.05 && landed && landUp <= 0, `上がった${rise.toFixed(3)}m 着地後の最大vy=${landUp.toFixed(2)}`)
+ok('地面ワイヤー: 掛けている間の1ステップは最高速×dt 以下（瞬間移動しない）', maxStep <= RUN.maxSpeed * dt + 1e-6, `${maxStep.toFixed(3)}m / ${(RUN.maxSpeed * dt).toFixed(3)}m`)
 r = airborne()
 evs = run(r, 1.5, (t, rr) => ({ wire: Math.floor(t * 6) % 2 === 0 }))
 ok('地面ワイヤー: ワイヤーボタン（狙いなし）では空中でも地面に掛からない', !evs.some(e => e.ground), `wire=${evs.filter(e => e.t === 'wire').length}`)

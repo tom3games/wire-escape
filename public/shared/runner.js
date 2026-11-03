@@ -13,7 +13,7 @@
 // 座標は車と同じ（x=東西, z=南北, yaw=0 で +z を向く）。y は足の高さ。
 // 体力は dmg.body（車と同じ名前にして、警察と犯人の判定 chase.js をそのまま使う）
 
-import { GAME } from './config.js?v=8'
+import { GAME } from './config.js?v=9'
 
 export const RUN = {
   radius: 0.42, height: 1.75,
@@ -64,10 +64,12 @@ export const RUN = {
   pitDepth: 2.2,
   // 地面ワイヤー（2026-11-03 本人「空中に浮いてる間は地面にもワイヤーつけて加速できるように」「地面をちゃんとタップしなあかん感じに」）
   // 空中で画面の地面（道・屋上）をタップした時だけ。点へ向かって加速し、近くか通り過ぎたら外れて進む向き＋上へ跳ねる
-  groundWireAcc: 30,            // 点へ向かう加速（m/s²）
+  groundWireAcc: 48,            // 点へ向かう加速（m/s²）。30→48（本人「地面にワイヤー刺してもあんまり加速できない」）
+  groundWireBoost: 9,           // 掛けた瞬間に点の向きへ足す速さ（m/s。最高速で頭打ち）
   groundWireRelease: 4,         // 点からこの距離で外れる（m）
   groundWireKick: 4,            // 外れた時に水平の進む向きへ足す（m/s）
-  groundWireHop: 7,             // 外れた時の上向きの速さの下限
+  groundWireHop: 3.5,           // 外れた時の上向きの速さの下限。足元から groundWireHopAbove より上の空中で外れた時だけ（7→3.5）
+  groundWireHopAbove: 3,        // これより低い所で外れた・ロープのまま着地した時は跳ねずにそのまま着地（本人「着いてからバウンドするのはおかしい」）
   groundWireMaxT: 3             // これ以上掛けていたら外す（秒）
 }
 
@@ -355,6 +357,11 @@ export function stepRunner(r, inp, dt, world) {
       else {
         r.sneaking = false
         r.rope = { x: w.x, y: w.y, z: w.z, len: d, t: 0, ground: true }
+        // 掛けた瞬間に点の向きへ足す（最高速で頭打ち）
+        const ux = (w.x - r.x) / d, uy = (w.y - (r.y + 1.2)) / d, uz = (w.z - r.z) / d
+        r.vx += ux * RUN.groundWireBoost; r.vy += uy * RUN.groundWireBoost; r.vz += uz * RUN.groundWireBoost
+        const sp = Math.hypot(r.vx, r.vy, r.vz), vm = RUN.maxSpeed
+        if (sp > vm) { r.vx *= vm / sp; r.vy *= vm / sp; r.vz *= vm / sp }
         r.swings++
         ev.push({ t: 'wire', ground: true, x: w.x, y: w.y, z: w.z, combo: r.combo })
       }
@@ -468,14 +475,24 @@ function release(r, byPlayer) {
   const rp = r.rope
   r.rope = null
   r.zipping = false
+  // 地面ワイヤーは上へ跳ねない（着地・手で外した時。そのまま落ちる）
+  if (rp.ground) { r.vy = Math.min(r.vy, 0); r.events.push({ t: 'unwire', auto: !byPlayer, ground: true }); return }
   // 外した瞬間に少し上へ（次のワイヤーまでの間をつくる）
   if (r.vy > -4) r.vy += RUN.releaseKick
   if (!r.zipExit) r.vy = Math.min(r.vy, RUN.releaseVyMax)
   r.events.push({ t: 'unwire', auto: !byPlayer, ground: !!rp.ground })
 }
 
-// 地面ワイヤーが外れる: 進む向きに少し足して上へ跳ねる（スリングショット）
-function groundRelease(r) {
+// 地面ワイヤーが外れる: 空中の高い所なら進む向きに少し足して上へ跳ねる（スリングショット）
+// 床に近い所で外れた時は跳ねずに下りる（水平の勢いは残す）
+function groundRelease(r, world) {
+  const above = r.y - floorAt(world, r.x, r.z, r.y + 0.5).h
+  if (above <= RUN.groundWireHopAbove) {
+    r.vy = Math.min(r.vy, 0)
+    r.rope = null
+    r.events.push({ t: 'unwire', auto: false, ground: true, low: true })
+    return
+  }
   const hv = Math.hypot(r.vx, r.vz)
   if (hv > 0.5) { r.vx += r.vx / hv * RUN.groundWireKick; r.vz += r.vz / hv * RUN.groundWireKick }
   r.vy = Math.max(r.vy, RUN.groundWireHop)
@@ -512,7 +529,7 @@ function physics(r, thr, dt, world, passive) {
     const closing = (r.vx * dx + r.vy * dy + r.vz * dz) / d
     // 胸を点へ引くので、浅い角度で入ると点の手前で足が地面に着く。着く直前（足元 1m 以内で下りている）も外して跳ねる
     const low = r.vy < 0 && r.y - floorAt(world, r.x, r.z, r.y + 0.5).h < 1
-    if (d < RUN.groundWireRelease || low || (closing < 0 && rp.t > 0.25) || rp.t > RUN.groundWireMaxT) groundRelease(r)
+    if (d < RUN.groundWireRelease || low || (closing < 0 && rp.t > 0.25) || rp.t > RUN.groundWireMaxT) groundRelease(r, world)
   }
   // ワイヤー: 長さより遠くへは行けない（外へ向かう速さを消す）
   if (r.rope && !r.rope.ground) {

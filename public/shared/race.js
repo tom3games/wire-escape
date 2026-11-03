@@ -1,11 +1,11 @@
 // レースの進行（カウントダウン・チェックポイント・順位・ゴール・結果）。
 // オフラインではブラウザが、オンラインではサーバーがこれを持つ。どちらも同じ判定になる。
 
-import { GAME, REWARD } from './config.js?v=8'
-import { createCar, step, respawn, speedOf } from './physics.js?v=8'
-import { crossedGate, progressOf, gateAt, totalGates } from './track.js?v=8'
-import { createDriver, drive, planRoute } from './ai.js?v=8'
-import { createTraffic } from './traffic.js?v=8'
+import { GAME, REWARD } from './config.js?v=9'
+import { createCar, step, respawn, speedOf } from './physics.js?v=9'
+import { crossedGate, progressOf, gateAt, totalGates } from './track.js?v=9'
+import { createDriver, drive, planRoute } from './ai.js?v=9'
+import { createTraffic } from './traffic.js?v=9'
 
 export const BOT_NAMES = ['ガンテツ', 'ミサキ', 'BOLT', 'タツミ', 'ROOK', 'ヒバナ', 'VEGA']
 const BOT_CARS = ['bruiser', 'dart', 'runner', 'bruiser', 'dart', 'runner', 'runner']

@@ -1,10 +1,10 @@
 // 物理・コース・レース判定の単体テスト（描画なし）
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { createWorld, crossedGate, normalizeGates } from '../public/shared/track.js?v=8'
-import { createCar, step, speedOf } from '../public/shared/physics.js?v=8'
-import { Race } from '../public/shared/race.js?v=8'
-import { buildStats, GAME } from '../public/shared/config.js?v=8'
+import { createWorld, crossedGate, normalizeGates } from '../public/shared/track.js?v=9'
+import { createCar, step, speedOf } from '../public/shared/physics.js?v=9'
+import { Race } from '../public/shared/race.js?v=9'
+import { buildStats, GAME } from '../public/shared/config.js?v=9'
 import { runRoute } from '../tools/sim.mjs'
 
 const DT = GAME.step

@@ -1,8 +1,8 @@
 // 杉林。1本 = 幹（実写の杉の樹皮）＋ 葉の板3枚（手描きの枝葉の絵を透かして十字に立てる）。
 // 全部を InstancedMesh 2つで描く（何千本でも描画は2回）。
 import * as THREE from 'three'
-import { tex } from './look.js?v=8'
-import { Q } from './quality.js?v=8'
+import { tex } from './look.js?v=9'
+import { Q } from './quality.js?v=9'
 
 // 葉の絵: 下から上へ、垂れた枝の房を重ねて細長い円錐の樹冠を描く
 function crownTexture() {

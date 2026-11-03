@@ -1,5 +1,5 @@
 // CPU のワイヤーの人（タイトル画面のデモと、逮捕・逃げ切りの釣り合いを測るのに使う）。
-import { floorAt } from './runner.js?v=8'
+import { floorAt } from './runner.js?v=9'
 
 // 逃げる道は車の CPU 犯人と同じ考え方（chase.planRobber: 警察から遠い交差点へ）。警察が近いとワイヤーで飛ぶ
 
