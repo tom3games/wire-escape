@@ -29,13 +29,16 @@ export class Touch {
     // 左右のボタン（押している間だけ切る。切れ方は input.js でなめらかにする）
     hold(q('[data-k=left]'), 'left', true)
     hold(q('[data-k=right]'), 'right', true)
-    // 左手のスティック（触った所に出る。倒した向きと量）
+    // 左手のスティック: 左下に固定（2026-11-03 本人「左スティックは固定で」）。触った所へ移動しない
+    // 円の少し外（半径×1.35）まで触れて反応。外から指をすべらせて入ったら、入った時点から倒した扱い（中心は動かさない）
     this.stick = { x: 0, y: 0, mag: 0, id: null }
-    const zone = q('#stickZone') || document.getElementById('stickZone'), base = document.getElementById('stickBase'), knob = document.getElementById('stickKnob')
-    if (zone && base && knob) {
-      const R = 56
-      let cx = 0, cy = 0
-      const rest = () => { base.style.left = ''; base.style.top = ''; base.classList.remove('held'); knob.style.transform = 'translate(-50%,-50%)' }
+    const base = document.getElementById('stickBase'), knob = document.getElementById('stickKnob')
+    if (base && knob) {
+      const REACH = 1.35
+      let cx = 0, cy = 0, R = 56
+      const center = () => { const b = base.getBoundingClientRect(); cx = b.left + b.width / 2; cy = b.top + b.height / 2; R = b.width / 2 * 0.9; return b.width / 2 }
+      const inReach = e => { const h = center(); return Math.hypot(e.clientX - cx, e.clientY - cy) <= h * REACH }
+      const rest = () => { base.classList.remove('held'); knob.style.transform = 'translate(-50%,-50%)' }
       const move = e => {
         let dx = e.clientX - cx, dy = e.clientY - cy
         const l = Math.hypot(dx, dy)
@@ -43,20 +46,20 @@ export class Touch {
         this.stick.x = dx / R; this.stick.y = -dy / R; this.stick.mag = Math.min(1, l / R)
         knob.style.transform = `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px))`
       }
-      zone.addEventListener('pointerdown', e => {
+      const grab = e => { this.stick.id = e.pointerId; base.classList.add('held'); move(e) }
+      const visible = () => this.active && base.offsetParent !== null
+      document.addEventListener('pointerdown', e => {
+        if (this.stick.id != null || !visible() || e.pointerType === 'mouse' || !inReach(e)) return
         e.preventDefault()
-        if (this.stick.id != null) return
-        this.stick.id = e.pointerId
-        try { zone.setPointerCapture(e.pointerId) } catch {}
-        const zr = zone.getBoundingClientRect()
-        cx = e.clientX; cy = e.clientY
-        base.style.left = (cx - zr.left) + 'px'; base.style.top = (cy - zr.top) + 'px'
-        base.classList.add('held')
-        move(e)
-      })
-      zone.addEventListener('pointermove', e => { if (e.pointerId === this.stick.id) move(e) })
+        grab(e)
+      }, { capture: true })
+      document.addEventListener('pointermove', e => {
+        if (e.pointerId === this.stick.id) { move(e); return }
+        // 画面の別の所から指をすべらせてスティックに入った
+        if (this.stick.id == null && e.pointerType !== 'mouse' && (e.buttons || e.pressure > 0 || e.pointerType === 'touch') && visible() && inReach(e)) grab(e)
+      }, { capture: true })
       const up = e => { if (e.pointerId !== this.stick.id) return; this.stick.id = null; this.stick.x = this.stick.y = this.stick.mag = 0; rest() }
-      zone.addEventListener('pointerup', up); zone.addEventListener('pointercancel', up); zone.addEventListener('lostpointercapture', up)
+      document.addEventListener('pointerup', up, { capture: true }); document.addEventListener('pointercancel', up, { capture: true })
     }
     // 長押しメニュー・選択・拡大を出さない
     root.addEventListener('contextmenu', e => e.preventDefault())

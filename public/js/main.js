@@ -1,27 +1,27 @@
 // 画面の入口。タイトル（裏でCPUの追跡のデモ）→ ガレージ → 警察と犯人 → 結果。
 // 物理と追跡の判定は shared/ のものをそのまま使い、ここは描画・入力・音・画面遷移だけを持つ。
 import * as THREE from 'three'
-import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=9'
-import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=9'
-import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=9'
-import { createNav } from '../shared/citynav.js?v=9'
-import { speedOf } from '../shared/physics.js?v=9'
-import { createDriver, drive, planRoute } from '../shared/ai.js?v=9'
-import { buildScene, propGeometry } from './scene.js?v=9'
-import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=9'
-import { FX } from './fx.js?v=9'
-import { Audio } from './audio.js?v=9'
-import { Input } from './input.js?v=9'
-import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=9'
-import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=9'
-import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=9'
-import { loadSky, makeComposer, setAniso } from './look.js?v=9'
-import { Q, LOW } from './quality.js?v=9'
-import { Online } from './online.js?v=9'
-import { Touch } from './touch.js?v=9'
-import { RunnerModel } from './runnermodel.js?v=9'
-import { findAnchor, aimTap, RUN } from '../shared/runner.js?v=9'
-import { setTrafficSpeed } from '../shared/traffic.js?v=9'
+import { GAME, CARS, UPGRADES, PAINTS, DESTRUCT, CHASE, buildStats } from '../shared/config.js?v=10'
+import { createWorld, FALL_SEC, terrain } from '../shared/track.js?v=10'
+import { Chase, mulberry, COP_PAINT, ROBBER_PAINT, blast, gunHit } from '../shared/chase.js?v=10'
+import { createNav } from '../shared/citynav.js?v=10'
+import { speedOf } from '../shared/physics.js?v=10'
+import { createDriver, drive, planRoute } from '../shared/ai.js?v=10'
+import { buildScene, propGeometry } from './scene.js?v=10'
+import { CarModel, ProcCar, loadCarModel } from './carmodel.js?v=10'
+import { FX } from './fx.js?v=10'
+import { Audio } from './audio.js?v=10'
+import { Input } from './input.js?v=10'
+import { t, applyI18n, setLang, getLang, placeText } from './i18n.js?v=10'
+import { loadProfile, saveProfile, buyUpgrade, sellUpgrade } from './save.js?v=10'
+import { HUD, drawFullMap, ICON_COP, ICON_ROBBER } from './hud.js?v=10'
+import { loadSky, makeComposer, setAniso } from './look.js?v=10'
+import { Q, LOW } from './quality.js?v=10'
+import { Online } from './online.js?v=10'
+import { Touch } from './touch.js?v=10'
+import { RunnerModel } from './runnermodel.js?v=10'
+import { findAnchor, aimTap, RUN } from '../shared/runner.js?v=10'
+import { setTrafficSpeed } from '../shared/traffic.js?v=10'
 setTrafficSpeed(0.55) // 一般車は遅め（本人「車早すぎ」）
 
 // ---------------------------------------------------------------- ロード画面（index.html の #loader）の進み具合
@@ -731,6 +731,8 @@ document.addEventListener('pointerdown', e => {
 document.addEventListener('pointermove', e => {
   const g = gest.get(e.pointerId)
   if (!g) return
+  // 指をすべらせて左のスティックに入ったら、そこからはスティック（カメラもワイヤーもしない）
+  if (touch.stick && touch.stick.id === e.pointerId) { gest.delete(e.pointerId); return }
   const dx = e.clientX - g.lx, dy = e.clientY - g.ly
   g.lx = e.clientX; g.ly = e.clientY
   if (!g.moved && Math.hypot(e.clientX - g.x, e.clientY - g.y) > 12) g.moved = true
@@ -2136,7 +2138,7 @@ addEventListener('pointerdown', () => audio.start(), { once: true })
 window.__btr = {
   get world() { return world }, get race() { return race }, get me() { return me }, get mode() { return mode }, profile, startOffline: beginPlayerRace,
   get online() { return online }, get myId() { return myId }, get camMode() { return camMode }, juice, get camHd() { return cam.hd }, get camBank() { return cam.bank || 0 }, snapCam() { snapCamera(); cam.hd = me ? me.yaw : 0; cam.pitch = 0 },
-  setPaused: p => { paused = p }, fx, camera, renderer,
+  setPaused: p => { paused = p }, fx, camera, renderer, touch,
   autopilot() {
     if (!me) return
     const e = race.entry(myId)

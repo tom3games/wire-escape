@@ -2,7 +2,7 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
 import { readFileSync, statSync } from 'node:fs'
-import { windVol } from '../public/js/audio.js?v=9'
+import { windVol } from '../public/js/audio.js?v=10'
 
 test('風の音量: 地面 0、空中で min(0.35, (v-16)/40)', () => {
   for (const v of [0, 6, 20, 40]) assert.equal(windVol(v, false), 0, `地面 ${v}m/s`)

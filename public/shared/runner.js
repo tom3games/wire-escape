@@ -13,7 +13,7 @@
 // 座標は車と同じ（x=東西, z=南北, yaw=0 で +z を向く）。y は足の高さ。
 // 体力は dmg.body（車と同じ名前にして、警察と犯人の判定 chase.js をそのまま使う）
 
-import { GAME } from './config.js?v=9'
+import { GAME } from './config.js?v=10'
 
 export const RUN = {
   radius: 0.42, height: 1.75,

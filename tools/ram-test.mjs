@@ -1,9 +1,9 @@
 // 犯人が全力で警察車に体当たりして、何回で大破するか（後ろから・横から）。警察が犯人に当てたときの自損も測る。
 // node tools/ram-test.mjs
-import { createWorld } from '../public/shared/track.js?v=9'
-import { Chase } from '../public/shared/chase.js?v=9'
-import { step, speedOf } from '../public/shared/physics.js?v=9'
-import { GAME } from '../public/shared/config.js?v=9'
+import { createWorld } from '../public/shared/track.js?v=10'
+import { Chase } from '../public/shared/chase.js?v=10'
+import { step, speedOf } from '../public/shared/physics.js?v=10'
+import { GAME } from '../public/shared/config.js?v=10'
 const w = createWorld('city')
 function trial(kind, run = 34) {
   const ch = new Chase(w, { seed: 5 })

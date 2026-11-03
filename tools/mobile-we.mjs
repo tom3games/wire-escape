@@ -10,6 +10,7 @@ const srv = await serveStatic(5198)
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const bad = [], good = []
 const ok = (c, l, d = '') => (c ? good : bad).push(`${c ? 'OK' : 'NG'}  ${l}  ${d}`)
+const stickInfo = {}
 const sizes = [[360, 640], [390, 844], [844, 390], [667, 375], [768, 1024], [1440, 900]]
 for (const [w, h] of sizes) {
   const b = await webkit.launch()
@@ -49,11 +50,31 @@ for (const [w, h] of sizes) {
     const vis = await p.evaluate(() => !document.getElementById('touch').classList.contains('hidden'))
     ok(vis, tag + ' タッチ操作が出る')
     // 左手のスティック: 触って上へ倒すと走る
-    const stick = (type, dx, dy) => p.evaluate(([type, dx, dy]) => {
-      const z = document.getElementById('stickZone').getBoundingClientRect()
-      const x0 = z.left + 90, y0 = z.bottom - 90
-      document.getElementById('stickZone').dispatchEvent(new PointerEvent(type, { pointerId: 77, pointerType: 'touch', bubbles: true, clientX: x0 + dx, clientY: y0 + dy }))
-    }, [type, dx, dy])
+    // スティックは左下に固定（2026-11-03 本人「左スティックは固定で」）。中心から dx,dy の所を触る
+    const stick = (type, dx, dy, id = 77) => p.evaluate(([type, dx, dy, id]) => {
+      const b = document.getElementById('stickBase').getBoundingClientRect()
+      const x = b.left + b.width / 2 + dx, y = b.top + b.height / 2 + dy
+      const el = document.elementFromPoint(Math.max(1, Math.min(innerWidth - 1, x)), Math.max(1, Math.min(innerHeight - 1, y))) || document.body
+      el.dispatchEvent(new PointerEvent(type, { pointerId: id, pointerType: 'touch', bubbles: true, buttons: type === 'pointerup' ? 0 : 1, pressure: type === 'pointerup' ? 0 : 0.5, clientX: x, clientY: y }))
+    }, [type, dx, dy, id])
+    const st = () => p.evaluate(() => { const b = document.getElementById('stickBase').getBoundingClientRect(), S = window.__btr.touch.stick; return { cx: Math.round(b.left + b.width / 2), cy: Math.round(b.top + b.height / 2), d: Math.round(b.width), id: S.id, mag: +S.mag.toFixed(2) } })
+    {
+      const s0 = await st()
+      // 円の外の遠い所（左の中ほど）を触っても出てこない・動かない
+      await stick('pointerdown', 110, -170, 91); await p.waitForTimeout(50)
+      const s1 = await st()
+      await stick('pointerup', 110, -170, 91)
+      ok(s1.id == null && s1.mag === 0 && s1.cx === s0.cx && s1.cy === s0.cy, tag + ' スティックは固定（遠い所を触っても出ない・動かない）', JSON.stringify({ s0, s1 }))
+      // 円の少し外（半径×1.3）を触ると反応する
+      await stick('pointerdown', s0.d / 2 * 1.3, 0, 92); await p.waitForTimeout(30)
+      const s2 = await st(); await stick('pointerup', s0.d / 2 * 1.3, 0, 92)
+      ok(s2.id === 92 && s2.mag > 0.9 && s2.cx === s0.cx, tag + ' 円の少し外から触っても反応（中心は動かない）', JSON.stringify(s2))
+      // 外から指をすべらせて入ったら、入った時点から倒した扱い
+      await stick('pointerdown', s0.d * 1.6, -s0.d * 1.2, 93); await stick('pointermove', s0.d * 0.45, -s0.d * 0.35, 93); await p.waitForTimeout(30)
+      const s3 = await st(); await stick('pointerup', s0.d * 0.45, -s0.d * 0.35, 93)
+      ok(s3.id === 93 && s3.mag > 0.8, tag + ' 外からすべらせて入ると倒した扱い', JSON.stringify(s3))
+      stickInfo[tag] = { center: [s0.cx, s0.cy], diameter: s0.d, fromLeft: s0.cx - s0.d / 2, fromBottom: (await p.evaluate(() => innerHeight)) - (s0.cy + s0.d / 2) }
+    }
     const p0 = await p.evaluate(() => ({ x: window.__btr.me.x, z: window.__btr.me.z }))
     await stick('pointerdown', 0, 0); await stick('pointermove', 0, -60)
     await p.waitForTimeout(1500)
@@ -124,4 +145,5 @@ for (const [w, h] of sizes) {
 }
 srv.close()
 console.log(good.join('\n')); console.log(bad.join('\n'))
+console.log(JSON.stringify(stickInfo))
 console.log(bad.length ? `NG ${bad.length}` : `全部OK ${good.length}`)

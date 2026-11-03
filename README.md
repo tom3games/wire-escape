@@ -42,7 +42,7 @@
 - 山場で一瞬止める＋画面のふちの光（#hitflash）＋揺れ: 警察が見失った 0.12秒・踏みつけ 0.1秒・ネットを抜けた 0.05秒・穴から出た 0.04秒
 - ワイヤー中だけ重力1.07倍・最高速 38→41（逃げる側だけ。警官は 38 のまま）。CPU 128 回で逃げ切り 58%→57%（両方に掛けると 52% に落ちたので警官は外した）
 - 確認: `node tools/wire-juice.mjs [webkit]`（22項目、shots/juice/wire-*）
-- キャッシュバスター: public の js/shared の import と tools/test/lib の import に全部 `?v=N` が付いている。上げる時は `grep -rl "?v=9'" public tools test lib | xargs sed -i '' "s/?v=9'/?v=10'/g"` と index.html の3か所（style.css・modulepreload・main.js）
+- キャッシュバスター: public の js/shared の import と tools/test/lib の import に全部 `?v=N` が付いている。上げる時は `grep -rl "?v=10'" public tools test lib | xargs sed -i '' "s/?v=10'/?v=11'/g"` と index.html の3か所（style.css・modulepreload・main.js）
 
 ## 地面ワイヤー（2026-11-03、?v=8）
 
@@ -64,7 +64,7 @@
 
 | PC | スマホ | 動作 |
 |---|---|---|
-| W A S D / 矢印 | 左手のスティック（触った所に出る。倒した向きへ走る） | 走る・向き / スイング中は前へこぐ |
+| W A S D / 矢印 | 左下に固定のスティック（倒した向きへ走る。円の少し外からでも、外からすべらせて入っても反応） | 走る・向き / スイング中は前へこぐ |
 | Space | ジャンプ | ジャンプ（ネット・穴では連打） |
 | クリック | 建物をタッチ | その建物へワイヤー。もう一度で外す |
 | E / K | 大きい橙のボタン | 前の上へ自動でワイヤー |

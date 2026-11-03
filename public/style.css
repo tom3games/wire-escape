@@ -588,13 +588,16 @@ body.touch .reward { top: 30%; }
 @media (max-height: 430px) { #hud .eye { top: 70px; } }
 
 /* 左手のスティック（触った所に出る） */
-.t-stickzone { position: absolute; left: 0; bottom: 0; width: 46%; height: 62%; pointer-events: auto; touch-action: none; }
+.t-stickzone { position: absolute; left: 0; bottom: 0; width: 46%; height: 62%; pointer-events: none; }
+/* スティックは左下に固定。触れる所は円の少し外（半径×1.35）まで */
+.t-stick::before { content: ''; position: absolute; inset: -21px; border-radius: 50%; }
+.t-stick { pointer-events: auto; touch-action: none; }
 .t-stick { position: absolute; left: calc(max(16px, env(safe-area-inset-left)) + 62px); top: calc(100% - max(16px, env(safe-area-inset-bottom)) - 62px); width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; border: 2px solid rgba(255,255,255,0.35); background: rgba(20,22,26,0.32); opacity: 0.6; transition: opacity .15s; }
 .t-stick.held { opacity: 1; }
 .t-knob { position: absolute; left: 50%; top: 50%; width: 54px; height: 54px; border-radius: 50%; background: rgba(255,255,255,0.85); box-shadow: 0 2px 8px rgba(0,0,0,0.4); transform: translate(-50%,-50%); }
 /* 右手: ジャンプとワイヤー（自動で狙う）だけ */
 .t-pedals { grid-template-columns: 88px 112px; grid-template-rows: 112px; grid-template-areas: "jump wire"; }
-@media (max-height: 430px) { .t-pedals { grid-template-columns: 74px 94px; grid-template-rows: 94px; } .t-stick { width: 108px; height: 108px; margin: -54px 0 0 -54px; } }
+@media (max-height: 430px) { .t-pedals { grid-template-columns: 74px 94px; grid-template-rows: 94px; } .t-stick { width: 108px; height: 108px; margin: -54px 0 0 -54px; } .t-stick::before { inset: -18px; } }
 @media (max-width: 440px) and (orientation: portrait) { .t-pedals { grid-template-columns: 76px 96px; grid-template-rows: 96px; } }
 
 /* しゃがみ歩きは右手（ジャンプの上） */
