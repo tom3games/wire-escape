@@ -1,8 +1,8 @@
 // 地面ワイヤーの数字: 25m/s までの秒・掛けている間の最高速・外れた後に上がる高さ・着地後の上向き
 //   node tools/groundwire-num.mjs
-import { createWorld } from '../public/shared/track.js?v=10'
-import { createRunner, stepRunner, RUN } from '../public/shared/runner.js?v=10'
-import { createNav } from '../public/shared/citynav.js?v=10'
+import { createWorld } from '../public/shared/track.js?v=11'
+import { createRunner, stepRunner, RUN } from '../public/shared/runner.js?v=11'
+import { createNav } from '../public/shared/citynav.js?v=11'
 const world = createWorld('city'), nav = createNav(world), dt = 1 / 60
 const n = nav.list.find(n => n.i === 4 && n.j === 4)
 const rows = []

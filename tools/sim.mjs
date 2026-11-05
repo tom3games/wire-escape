@@ -1,12 +1,12 @@
 // 描画なしでコースを走らせる検証。ルートごとの所要時間、橋のジャンプの成否、加速と最高速を測る。
 // 使い方: node tools/sim.mjs            （全部）
 //         node tools/sim.mjs routes     （ルート比較だけ）
-import { createWorld } from '../public/shared/track.js?v=10'
-import { createCar, step, speedOf } from '../public/shared/physics.js?v=10'
-import { createDriver, drive, planRoute } from '../public/shared/ai.js?v=10'
-import { crossedGate, gateAt, totalGates } from '../public/shared/track.js?v=10'
-import { GAME } from '../public/shared/config.js?v=10'
-import { mulberry } from '../public/shared/race.js?v=10'
+import { createWorld } from '../public/shared/track.js?v=11'
+import { createCar, step, speedOf } from '../public/shared/physics.js?v=11'
+import { createDriver, drive, planRoute } from '../public/shared/ai.js?v=11'
+import { crossedGate, gateAt, totalGates } from '../public/shared/track.js?v=11'
+import { GAME } from '../public/shared/config.js?v=11'
+import { mulberry } from '../public/shared/race.js?v=11'
 
 const DT = GAME.step
 const world = createWorld(process.env.STAGE || 'touge')

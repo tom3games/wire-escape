@@ -18,7 +18,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <!-- style.css はロード画面の裏で読む（描画を止めない）。ロード画面は下の <style> だけで出る。フォントはスクリプトが揃ってから頼む -->
-<link rel="stylesheet" href="style.css?v=10" media="print" onload="this.media='all';window.__cssOk=1">
+<link rel="stylesheet" href="style.css?v=11" media="print" onload="this.media='all';window.__cssOk=1">
 <style>
   /* ロード画面: 警察無線の周波数を合わせている間に街を読み込む。style.css を待たずに出すのでここに書く */
   #loader { position: fixed; inset: 0; z-index: 100; isolation: isolate; background: #0d0f12; color: #f3f1ea; overflow: hidden;
@@ -138,7 +138,7 @@
 <!-- 先読みは importmap の後に置く（前に置くと Chrome が "three" を解決できず起動しない。2026-11-03 公開版で踏んだ） -->
 <link rel="modulepreload" href="vendor/three.module.js">
 <link rel="modulepreload" href="vendor/three.core.js">
-<link rel="modulepreload" href="js/main.js?v=10">
+<link rel="modulepreload" href="js/main.js?v=11">
 </head>
 <body>
 <!-- ロード画面（読み込みが全部終わるまで。main.js が消す） -->
@@ -366,6 +366,6 @@
   </div>
 </section>
 
-<script type="module" src="js/main.js?v=10"></script>
+<script type="module" src="js/main.js?v=11"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 // ヘリのランチャーと修理工場を CPU だけで確かめる。node tools/sim-heli.mjs [回数]
 // 手配度を3から始め（ヘリがすぐ出る）、撃った数・当たった数・避けた数、修理の回数を数える
-import { createWorld } from '../public/shared/track.js?v=10'
-import { Chase } from '../public/shared/chase.js?v=10'
-import { GAME, CHASE } from '../public/shared/config.js?v=10'
+import { createWorld } from '../public/shared/track.js?v=11'
+import { Chase } from '../public/shared/chase.js?v=11'
+import { GAME, CHASE } from '../public/shared/config.js?v=11'
 const N = Number(process.argv[2] || 6)
 let shots = 0, hits = 0, repairs = 0, minBody = 1, wrecksByMissile = 0
 for (let k = 0; k < N; k++) {
