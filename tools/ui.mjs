@@ -1,4 +1,5 @@
 // 各画面を複数サイズで撮り、はみ出しとエラーを数える。node tools/ui.mjs [webkit]
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium, webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { startServer } from '../server.mjs'

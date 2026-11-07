@@ -1,5 +1,6 @@
 // 爽快感の演出を実画面で起こして確かめる（パトカー撃破→スロー・テイクダウン文字、ニアミス、ニトロの流れる線）。
 // node tools/juice-check.mjs [chromium|webkit]  → shots/juice/
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium, webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

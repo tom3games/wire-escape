@@ -1,3 +1,4 @@
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 // 公開URLで確かめる: Chrome と iPhone 相当で開いて逃げる→ワイヤーが掛かる、エラー0、og.jpg が 200、OGP の meta
 import { chromium, webkit } from 'playwright'

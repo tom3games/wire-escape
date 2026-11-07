@@ -1,5 +1,6 @@
 // スマホ7サイズ×2ブラウザで、全画面が上下スクロールなしで一画面に収まるか（枠の中のスクロールも数える）。
 // node tools/fit.mjs [画面名...]   スクショは shots/fit/
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium, webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { startServer } from '../server.mjs'

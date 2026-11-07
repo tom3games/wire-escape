@@ -1,6 +1,7 @@
 // 読み込みの速さを測る（Fast 3G 相当: 下り 1.6Mbps・上り 0.75Mbps・遅延 150ms、キャッシュ無し）
 //   node tools/loadtime.mjs [URL]   既定は公開URL。ローカルは http://localhost:5199/ で public を配る（"local"）
 // 出すもの: 開いてから最初の描画（__btrReady）・読み込み完了（__btrLoaded、無ければ通信が1.5秒止まった時点）までの秒数、大きいファイル上位
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

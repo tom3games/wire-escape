@@ -1,6 +1,7 @@
 // 迫力の演出（空中しっぽ取り v5 から移植）を実画面で起こして確かめる。音は鳴らさない（mute.mjs）
 // 速さの線・視野・傾き・風の環境音・速く離した風切り・山場（振り切った/踏みつけ/ネットを抜けた）のヒットストップと光
 //   node tools/wire-juice.mjs [webkit]   → shots/juice/wire-*.png
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium, webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

@@ -1,5 +1,6 @@
 // 修理工場とヘリのランチャーを実ブラウザで起こして確かめる（chromium と webkit、横持ちスマホ相当）。
 // node tools/check-repair-heli.mjs   スクショは shots/chase/
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium, webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

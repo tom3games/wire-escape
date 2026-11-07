@@ -1,6 +1,7 @@
 // オンラインの警察と犯人を実ブラウザ2つ（＋任意で webkit）でつないで最後まで通す。
 // 1回目は制限時間を70秒に縮めて自然に決着させ、2回目（再戦）は犯人を止めて警察に逮捕させる（両方の結末を見る）。
 // node tools/e2e-online.mjs [--webkit]   （サーバーは自分で起動する）
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium, webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { startServer } from '../server.mjs'

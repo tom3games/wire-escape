@@ -1,5 +1,6 @@
 // 地面ワイヤーを実ブラウザで: 空中で道をタップ → 地面ワイヤーが掛かって加速 → 外れて跳ねる。地面にいる時に道をタップしても掛からない
 //   node tools/groundwire.mjs [webkit]   スクショは shots/groundwire/
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium, webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

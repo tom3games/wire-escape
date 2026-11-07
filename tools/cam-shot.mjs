@@ -1,4 +1,5 @@
 // 追いかけ視点の見え方を縦と横で撮る（前後比較用）。node tools/cam-shot.mjs ラベル  → shots/cam/
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

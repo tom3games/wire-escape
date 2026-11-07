@@ -1,4 +1,5 @@
 // 場面を作って止めて撮る: 落とし穴（予告・開いた・落ちた）・飛んでくるネット・捕まった網・ダウン・踏みつけ前・結果（逃げ切り・逮捕）
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

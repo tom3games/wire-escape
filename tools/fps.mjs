@@ -1,5 +1,6 @@
 // fps を測る。スマホ相当（タッチ・画素比3）の縦と横で、街ステージを自動運転させて数秒数える。
 // node tools/fps.mjs [ラベル]   （Mac の GPU を使い、CPU は CPU=4 倍遅くする。headless の既定はソフトウェア描画で遅い）
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

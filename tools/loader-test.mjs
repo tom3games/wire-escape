@@ -1,5 +1,6 @@
 // ロード画面の確認: 最初に出る → 本物の読み込み数で進む → 全部読み終えてから消える／スクリプトが読めないと失敗の表示が出る
 //   node tools/loader-test.mjs [webkit]   スクショは shots/loader/
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium, webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

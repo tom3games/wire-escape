@@ -1,4 +1,5 @@
 // スクショを並べた一覧画像を作る。node tools/sheet.mjs out.png a.png b.png ...
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { readFile } from 'node:fs/promises'

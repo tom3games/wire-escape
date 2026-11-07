@@ -1,5 +1,6 @@
 // OGP 画像（1200x630）を実際のゲーム画面から作る。node tools/og.mjs
 // 大通りの上をワイヤーでスイングする人と、下を走って追う警官を止めて撮り、左に文字をのせる
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

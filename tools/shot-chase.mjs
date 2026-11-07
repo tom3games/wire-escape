@@ -1,5 +1,6 @@
 // 警察と犯人を実画面で撮る。node tools/shot-chase.mjs [w] [h]
 // タイトル → 犯人で逃げる（自動運転）→ 警察で追う（自動運転）→ 結果。スクショは shots/chase/
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { chromium } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

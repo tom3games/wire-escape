@@ -612,3 +612,8 @@ body.touch .reward { top: 30%; }
 
 /* 説明の一文は画面の幅で折り返す（縦持ちではみ出さない） */
 #hud .hint { white-space: normal; max-width: min(92vw, 640px); width: max-content; text-align: center; line-height: 1.5; word-break: keep-all; overflow-wrap: anywhere; }
+/* 支援ボタン（共通 support.js）: 低い画面では結果の表がはみ出すので、一回り小さく */
+@media (max-height:700px){#tmSupport{min-height:34px!important;margin-top:2px!important;font-size:13px!important}}
+/* その分、低い画面の結果の表の行を詰める（8人でも一画面に収める） */
+@media (max-height:700px) and (max-width:760px){.rtable td{padding-top:1px;padding-bottom:1px}}
+@media (max-height:400px){.rtable td{padding-top:0;padding-bottom:0;line-height:1.3}}

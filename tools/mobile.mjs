@@ -1,5 +1,6 @@
 // iPhone 相当（webkit・タッチ）で、横持ちと縦持ちを実際に操作する。
 // 読み込みの量、タイトル→レース、アクセルを押して進むか、ハンドルで曲がるか、はみ出し、エラーを見る。
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { webkit, chromium } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'

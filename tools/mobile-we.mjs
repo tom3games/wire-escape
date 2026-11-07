@@ -1,5 +1,6 @@
 // iPhone 相当（webkit・タッチ）で 6 サイズ: タイトルが一画面、タッチのボタンで 走る→ワイヤー（巻き取りは無し）、
 // ボタンと表示がはみ出さず重ならない、エラー0。拡大止めも確かめる
+import '../mute-auto.mjs'  // テスト中は絶対に音を出さない（playwright を無音に差し替え）
 import { webkit } from 'playwright'
 import { muteContext, MUTE_LAUNCH } from './mute.mjs'
 import { serveStatic } from './static.mjs'
