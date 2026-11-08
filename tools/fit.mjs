@@ -9,7 +9,7 @@ const OUT = new URL('../shots/fit/', import.meta.url).pathname
 await mkdir(OUT, { recursive: true })
 const srv = await startServer({ port: 8193, quiet: true })
 const only = process.argv.slice(2).filter(a => !a.startsWith('-'))
-const SIZES = [[844, 390], [844, 340], [667, 320], [568, 320], [932, 360], [390, 844], [375, 667]]
+const SIZES = [[360, 640], [844, 390], [844, 340], [667, 320], [568, 320], [932, 360], [390, 844], [375, 667]]
 const UA = 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1'
 const bad = [], good = []
 for (const [ename, engine] of [['webkit', webkit], ['chromium', chromium]]) {
